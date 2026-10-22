@@ -186,3 +186,35 @@ bootstrap changes (its provenance records `d26428d…-dirty`). After everything 
 re-run from the clean commit `3fbfc55` as run `20261023-005930-20d2e4`. All 3,160 per-run records and all 255
 summary rows (estimates, CI bounds, SDs) were **identical** (max |difference| = 0.0). `results/runs/LATEST`
 points to the clean run, and every reported number comes from it.
+
+## Study 2 (pre-registered 2026-10-23, before any extraction): where does gaze live inside foundation models?
+
+**Motivation.** Post-hoc analysis P1 found that the final DINOv2-S CLS token decodes head pose (R² 0.95)
+but not gaze (R² < 0). Study 2 asks whether gaze information exists **anywhere** in frozen vision foundation
+models: in which layer, and in which tokens.
+
+**Models (frozen, Hugging Face weights):** `facebook/dinov2-small`, `facebook/dinov2-base`,
+`openai/clip-vit-base-patch16` (vision tower), `google/siglip-base-patch16-224` (vision tower),
+`facebook/vit-mae-base` (with `mask_ratio = 0` and an identity patch order, so all tokens are kept in
+place). Input: the same 448² MediaPipe face crop, resized to 224² with each model's own normalisation
+constants. DINOv2 gives a 16×16 grid with 14 px patches; the others give 14×14 grids with 16 px patches.
+
+**Representations per layer** (the embedding output plus every transformer block; 13 layers):
+* *global*: the CLS token, or, for SigLIP, which has no CLS token, the mean of all patch tokens;
+* *eye*: the mean of the patch tokens whose centres fall inside each eye's box (right and left eyes
+  concatenated). Eye boxes come from MediaPipe landmarks re-detected on the face crop: the eye corners and
+  lids, padded by 25 % of eye width. If no patch centre falls inside a box, the nearest patch is used.
+
+**Probes.** All use the five subject-disjoint FewGaze folds; every learned step is fit on training subjects only.
+1. *Decoding (primary):* a ridge regression (standardised features; α from RidgeCV's grid 10⁻²…10⁵) predicts
+   H, V and head pose P. We report the pooled held-out-subject R² for each model × layer × representation.
+   α selection uses within-training leave-one-out, which ignores subject grouping and can only make R²
+   optimistic.
+2. *Eye-contact readout (secondary):* (a) a linear logistic probe (C = 1, balanced weights) on all training
+   data, scored by held-out AUROC averaged over folds; (b) a geometric readout that uses the ridge
+   predictions Ĥ, V̂ (trained with the continuous gaze annotations, which is **more supervision** than the
+   binary labels of Study 1, stated as such): score = −[(Ĥ/σ_H)² + (V̂/σ_V)²], with σ estimated on
+   training subjects.
+
+**Decisions fixed now.** No layer or model is selected on test folds. All 5 × 13 × 2 cells are reported.
+Uncertainty: SD across the five folds. Comparisons with Study 1 are descriptive. Outputs: `results/study2/`.
