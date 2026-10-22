@@ -1,0 +1,53 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fewgaze"
+version = "0.1.0"
+description = "Subject-independent, label-budget study of camera-directed gaze classification"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "MIT (code only; see README for data and model licences)" }
+authors = [{ name = "FewGaze authors" }]
+# Core: everything needed for splits, training, metrics, statistics, plots and tests.
+dependencies = [
+  "numpy>=1.24,<2",
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "scipy>=1.10",
+  "matplotlib>=3.7",
+  "pyyaml>=6.0",
+  "pillow>=10.0",
+]
+
+[project.optional-dependencies]
+# Method A (MediaPipe geometry + shared face crops)
+geometry = ["mediapipe==0.10.21", "opencv-python-headless<4.11"]
+# Methods B-D (frozen DINOv2, L2CS-Net, CLIP). Install torch for your CUDA version first.
+models = ["torch>=2.1", "torchvision>=0.16", "transformers>=4.40,<4.50", "gdown>=5.0"]
+dev = ["pytest>=7", "ruff>=0.5", "mypy>=1.8"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 140
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = ["S101", "S311", "S603", "S607", "B905", "E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "E402"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true

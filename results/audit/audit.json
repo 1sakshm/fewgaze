@@ -1,0 +1,129 @@
+{
+  "created": "2026-10-22T18:14:29Z",
+  "dataset_root": "D:\\Cactus\\fewgaze\\data\\raw\\Columbia Gaze Data Set",
+  "manifest_fingerprint": "335876e2b2182213",
+  "n_images": 5880,
+  "n_invalid_files": 0,
+  "invalid_files": [],
+  "n_unreadable": 0,
+  "unreadable": [],
+  "n_subjects": 56,
+  "image_sizes": [
+    {
+      "width": 5184,
+      "height": 3456,
+      "n": 5880
+    }
+  ],
+  "formats": {
+    "JPEG": 5880
+  },
+  "modes": {
+    "RGB": 5880
+  },
+  "distances_m": [
+    2
+  ],
+  "head_poses": [
+    -30,
+    -15,
+    0,
+    15,
+    30
+  ],
+  "gaze_v": [
+    -10,
+    0,
+    10
+  ],
+  "gaze_h": [
+    -15,
+    -10,
+    -5,
+    0,
+    5,
+    10,
+    15
+  ],
+  "n_gaze_conditions_per_pose": 21,
+  "expected_grid_size": 5880,
+  "n_missing_grid_cells": 0,
+  "missing_grid_cells": [],
+  "n_duplicate_content_groups": 0,
+  "duplicate_content_groups": {},
+  "label_definition": {
+    "positive": {
+      "gaze_v": [
+        0
+      ],
+      "gaze_h": [
+        0
+      ]
+    },
+    "negative": "all_other",
+    "exclude": [],
+    "exclude_sample_ids": [
+      "0007_2m_-15P_-10V_0H",
+      "0007_2m_-15P_-10V_5H"
+    ]
+  },
+  "label_status_counts": {
+    "negative": 5598,
+    "positive": 280,
+    "excluded": 2
+  },
+  "per_head_pose_class_counts": {
+    "-30": {
+      "excluded": 0,
+      "negative": 1120,
+      "positive": 56
+    },
+    "-15": {
+      "excluded": 2,
+      "negative": 1118,
+      "positive": 56
+    },
+    "0": {
+      "excluded": 0,
+      "negative": 1120,
+      "positive": 56
+    },
+    "15": {
+      "excluded": 0,
+      "negative": 1120,
+      "positive": 56
+    },
+    "30": {
+      "excluded": 0,
+      "negative": 1120,
+      "positive": 56
+    }
+  },
+  "subjects_with_single_class": [],
+  "per_subject_positive_range": [
+    5,
+    5
+  ],
+  "near_camera_negatives": {
+    "definition": "negatives with gaze_v == 0 and |gaze_h| == 5 deg (closest non-camera condition)",
+    "n": 560,
+    "note": "Smith et al. (2013) estimate their detector's tolerance at ~2.5 deg horizontally; these are the hardest negatives, kept as negatives by default."
+  },
+  "identity_split_feasible": true,
+  "identity_split_note": "Subject IDs are encoded in both folder names and filenames; they are cross-checked during manifest parsing.",
+  "license_note": "Columbia Gaze Data Set: obtained via the CAVE download form (email required). The project page states the data may be used for non-commercial purposes only and that the UIST 2013 paper must be cited. No redistribution permission is stated, so FewGaze never commits or publishes dataset images.",
+  "runtime": {
+    "python": "3.11.17",
+    "platform": "Windows-10-10.0.22631-SP0",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "numpy": "1.26.4",
+    "sklearn": "1.9.1",
+    "pandas": "3.0.6",
+    "torch": "2.5.1+cu121",
+    "transformers": "4.46.3",
+    "mediapipe": "0.10.21",
+    "cv2": "4.11.0",
+    "cuda": true,
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU"
+  }
+}

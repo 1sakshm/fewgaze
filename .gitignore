@@ -1,0 +1,34 @@
+# Dataset and anything derived from its images (licence does not permit redistribution)
+data/raw/
+cache/
+results/figures/local_only/
+results/runs/*/predictions.csv.gz
+results/runs/*/selections.json.gz
+results/audit/manifest.csv
+results/extract_log.txt
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.venv/
+venv/
+.ipynb_checkpoints/
+
+# LaTeX build products
+report/*.aux
+report/*.log
+report/*.out
+report/*.bbl
+report/*.blg
+report/*.fls
+report/*.fdb_latexmk
+report/*.synctex.gz
+
+# OS
+.DS_Store
+Thumbs.db

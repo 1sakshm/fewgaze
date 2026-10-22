@@ -1,0 +1,16 @@
+# Exact versions used for the reported results (Python 3.11.17, Windows 11, CUDA 12.1 wheels).
+# Install torch first for your platform, e.g.:
+#   pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+numpy==1.26.4
+pandas==3.0.6
+scikit-learn==1.9.1
+scipy==1.17.1
+matplotlib==3.11.2
+PyYAML==6.0.3
+pillow==12.3.0
+mediapipe==0.10.21
+opencv-python-headless==4.10.0.84
+transformers==4.46.3
+safetensors==0.8.0
+pytest
+ruff
