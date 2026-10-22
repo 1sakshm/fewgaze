@@ -18,7 +18,7 @@
     <a class="wordmark" href="#top">FewGaze</a>
     <nav class="toc" aria-label="Sections">
       <a href="#question">Question</a><a href="#methods">Methods</a><a href="#protocol">Protocol</a>
-      <a href="#results">Results</a><a href="#errors">Errors</a><a href="#limitations">Limitations</a><a href="#reproduce">Reproduce</a>
+      <a href="#results">Results</a><a href="#demo">Demo</a><a href="#errors">Errors</a><a href="#limitations">Limitations</a><a href="#reproduce">Reproduce</a>
     </nav>
     <button class="theme-btn" id="theme-btn" type="button" aria-label="Toggle light or dark theme">Theme</button>
   </div>
@@ -41,6 +41,7 @@
       <a class="btn" id="link-paper" href="#" hidden>Read the paper (PDF)</a>
       <a class="btn secondary" id="link-code" href="#" hidden>Explore the code</a>
       <a class="btn secondary" href="#results">View experiments</a>
+      <a class="btn secondary" href="#demo">Try the live demo</a>
     </div>
     <div class="hero-figures" data-needs-results hidden>
       <div><div class="n" data-fill="dataset.n_images">–</div><div class="l">images</div></div>
@@ -187,9 +188,61 @@
   </div>
 </section>
 
+<section class="block" id="demo">
+  <div class="wrap">
+    <div class="section-head"><span class="num">05 · Demo</span><h2>Try the geometry classifier on your own photo</h2></div>
+    <div class="body-grid"><div class="main">
+      <p class="prose">This runs the study's best method, nine MediaPipe eye and head measurements fed to the quadratic
+        logistic regression, trained on all Columbia Gaze images. <strong>Everything happens in your browser; the photo is never uploaded.</strong>
+        It is a research demo, not an eye-contact detector: it learned from 56 people in one lab at 2&nbsp;m, so a selfie
+        or a webcam frame is a different situation from the one it was trained on.</p>
+      <div class="demo-grid">
+        <label class="demo-drop" id="demo-drop" for="demo-file">
+          <input type="file" id="demo-file" accept="image/*">
+          <span class="demo-drop-title">Choose a face photo</span>
+          <span class="demo-drop-sub">or drop or paste one here. Best: one face, roughly frontal, eyes open and visible.</span>
+        </label>
+        <div class="demo-howto">
+          <h3>What you will get</h3>
+          <ol>
+            <li>A crop of the eye region with the points the model measures: eye corners, lids and iris centres.</li>
+            <li>The model's probability that the person is looking into the camera, and its decision at 0.5.</li>
+            <li>Checks that say whether your photo falls inside the conditions the model saw in training.</li>
+          </ol>
+        </div>
+      </div>
+      <p class="demo-status" id="demo-status" role="status" aria-live="polite">No photo yet. The face model (about 13&nbsp;MB) loads when you choose one.</p>
+      <div class="demo-result" id="demo-result" hidden>
+        <div class="chart-card">
+          <canvas id="demo-canvas" class="demo-canvas" width="720" height="302" aria-label="Eye region with measured landmarks"></canvas>
+          <p class="caption">White: eye corners and lid points. Ring: iris centre. Measurements are relative to each eye's width, so photo size does not matter.</p>
+        </div>
+        <div class="demo-cards">
+          <div class="chart-card">
+            <h3 class="demo-h3">P(looking at the camera)</h3>
+            <div class="demo-score"><span id="demo-prob">–</span><span class="demo-verdict" id="demo-verdict"></span></div>
+            <div class="demo-bar" id="demo-bar" aria-hidden="true"><i></i><b></b></div>
+            <div class="demo-scale"><span>0</span><span>threshold 0.5</span><span>1</span></div>
+            <ul class="demo-checks" id="demo-checks"></ul>
+          </div>
+          <div class="chart-card">
+            <h3 class="demo-h3">The nine measurements</h3>
+            <div class="table-scroll"><table class="demo-table">
+              <thead><tr><th>Feature</th><th class="num">Your photo</th><th class="num">Training range</th></tr></thead>
+              <tbody id="demo-features"></tbody>
+            </table></div>
+            <p class="caption">Training range: 1st to 99th percentile over the 5,878 Columbia images. Values outside it are marked.</p>
+          </div>
+        </div>
+      </div>
+      <p class="caption" id="demo-model-meta"></p>
+    </div></div>
+  </div>
+</section>
+
 <section class="block" id="errors">
   <div class="wrap">
-    <div class="section-head"><span class="num">05 · Errors</span><h2>Where the classifiers say "looking at the camera"</h2></div>
+    <div class="section-head"><span class="num">06 · Errors</span><h2>Where the classifiers say "looking at the camera"</h2></div>
     <div class="body-grid"><div class="main">
       <div data-needs-results hidden>
         <p class="prose" id="error-text">Each cell shows the percentage of images in that gaze condition predicted as camera-directed, pooled over head poses, at <em>k</em> = 25. The outlined centre cell is the true positive class, so a perfect classifier would show 100 there and 0 everywhere else.</p>
@@ -202,7 +255,7 @@
 
 <section class="block" id="limitations">
   <div class="wrap">
-    <div class="section-head"><span class="num">06 · Limitations</span><h2>What this study cannot tell you</h2></div>
+    <div class="section-head"><span class="num">07 · Limitations</span><h2>What this study cannot tell you</h2></div>
     <div class="body-grid"><div class="main">
       <ul class="limit-list">
         <li><strong>Camera-directed gaze ≠ eye contact</strong>The subjects looked at a lens or a dot in a lab, not at a conversation partner.</li>
@@ -218,7 +271,7 @@
 
 <section class="block" id="reproduce">
   <div class="wrap">
-    <div class="section-head"><span class="num">07 · Reproduce</span><h2>Every number on this page comes from these commands</h2></div>
+    <div class="section-head"><span class="num">08 · Reproduce</span><h2>Every number on this page comes from these commands</h2></div>
     <div class="body-grid"><div class="main">
 <pre><code># Python 3.11; torch first (CUDA 12.1 shown; CPU also works)
 pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
@@ -239,7 +292,7 @@ pytest   # 42 tests, synthetic data only</code></pre>
 
 <section class="block" id="about" style="border-bottom:0">
   <div class="wrap">
-    <div class="section-head"><span class="num">08 · About</span><h2>About this project</h2></div>
+    <div class="section-head"><span class="num">09 · About</span><h2>About this project</h2></div>
     <div class="body-grid"><div class="main prose">
       <p>FewGaze is an independent research project. The work is in the protocol: the folds and training samples are identical across methods, the analysis plan was committed before any result existed, the uncertainty respects subject identity, and the report is limited to what the data supports. It does not claim a new model.</p>
     </div></div>
@@ -249,5 +302,6 @@ pytest   # 42 tests, synthetic data only</code></pre>
 
 <footer><div class="wrap">Code MIT. The Columbia Gaze Data Set © Columbia University is used for non-commercial research only (Smith, Yin, Feiner &amp; Nayar, UIST 2013). This page does not show any dataset images.</div></footer>
 <script src="app.js"></script>
+<script type="module" src="demo/demo.js"></script>
 </body>
 </html>

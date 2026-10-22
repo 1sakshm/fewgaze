@@ -47,6 +47,15 @@ with 95 % subject-bootstrap CIs. Sources: `results/tables/learning_curves.csv` a
 
 ![Learning curves](results/figures/fig3_learning_curves_auroc.png)
 
+## Live demo
+
+The project page ([`site/`](site/)) includes an in-browser demo of the best method. A visitor picks a face photo,
+and MediaPipe plus the exported geometry classifier return P(looking at the camera), the measured eye
+landmarks and warnings when the photo is outside the training conditions. The photo never leaves the browser.
+The browser pipeline matches the Python pipeline to within 4 × 10⁻⁴ in probability, with 0 of 24 decisions
+differing ([`site/demo/README.md`](site/demo/README.md)). The model was trained on 56 people in one lab, so it is
+a research demo and not an eye-contact detector.
+
 ## Methods
 
 | Method | Representation (frozen) | Trained head | Prior supervision |
@@ -111,6 +120,7 @@ python scripts/extract_features.py       --config configs/experiment.yaml   # ~2
 python scripts/run_experiments.py        --config configs/experiment.yaml   # ~10 min incl. 1,000-replicate bootstrap
 python scripts/analyze_errors.py         --config configs/experiment.yaml
 python scripts/generate_report_assets.py --config configs/experiment.yaml   # figures, LaTeX tables, site data
+python scripts/export_demo_model.py                                          # demo model (site/demo/model.json)
 cd report && latexmk -pdf main.tex                                          # paper
 
 # post-hoc analyses (P1, P2; clearly separated in results/posthoc/)

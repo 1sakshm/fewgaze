@@ -37,3 +37,4 @@ results/posthoc_extract_log.txt
 results/posthoc_run_log.txt
 results/runs/*/predictions.csv.gz
 results/runs/*/selections.json.gz
+site/demo/parity/

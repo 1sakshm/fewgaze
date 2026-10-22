@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>FewGaze demo parity test</title>
+<style>body{font:13px ui-monospace,Consolas,monospace;margin:16px}pre{white-space:pre-wrap}</style>
+</head>
+<body>
+<p>Runs the browser pipeline on locally generated reference images (<code>parity/</code>, created by
+<code>scripts/demo_parity_reference.py</code>; never committed) and compares with the Python outputs.</p>
+<pre id="out">running…</pre>
+<script type="module">
+import { FaceLandmarker } from "./vendor/vision_bundle.mjs";
+import { analyse } from "./fewgaze-core.js";
+
+const out = document.getElementById("out");
+try {
+  const [model, refs] = await Promise.all([fetch("model.json").then((r) => r.json()), fetch("parity/ref.json").then((r) => r.json())]);
+  const lm = await FaceLandmarker.createFromOptions(
+    { wasmLoaderPath: new URL("vendor/vision_wasm_internal.js", location.href).href, wasmBinaryPath: new URL("vendor/vision_wasm_internal.wasm", location.href).href },
+    { baseOptions: { modelAssetPath: "vendor/face_landmarker.task", delegate: "CPU" }, runningMode: "IMAGE", numFaces: 1, outputFacialTransformationMatrixes: true },
+  );
+  const report = { layouts: {}, n: refs.length, detail: [] };
+  const errs = { row: { feat: [], prob: [], dec: 0 }, col: { feat: [], prob: [], dec: 0 } };
+  let lmErr = 0, matErrRow = 0, matErrCol = 0;
+  for (const ref of refs) {
+    const img = new Image();
+    img.src = `parity/${ref.id}.png`;
+    await img.decode();
+    const res = lm.detect(img);
+    if (!res.faceLandmarks.length) { report.detail.push({ id: ref.id, error: "no face" }); continue; }
+    const L = res.faceLandmarks[0];
+    lmErr = Math.max(lmErr, Math.abs(L[0].x - ref.lm0[0]), Math.abs(L[0].y - ref.lm0[1]), Math.abs(L[468].x - ref.lm468[0]), Math.abs(L[468].y - ref.lm468[1]));
+    const M = res.facialTransformationMatrixes[0];
+    const rm = ref.matrix_rowmajor;
+    for (let i = 0; i < 16; i++) {
+      matErrRow = Math.max(matErrRow, Math.abs(M.data[i] - rm[i]));
+      matErrCol = Math.max(matErrCol, Math.abs(M.data[(i % 4) * 4 + Math.floor(i / 4)] - rm[i]));
+    }
+    for (const layout of ["row", "col"]) {
+      const a = analyse(model, L, M, ref.w, ref.h, layout);
+      errs[layout].feat.push(Math.max(...a.features.map((f, i) => Math.abs(f - ref.features[i]))));
+      errs[layout].prob.push(Math.abs(a.prob - ref.prob));
+      if ((a.prob >= 0.5) !== (ref.prob >= 0.5)) errs[layout].dec++;
+    }
+  }
+  for (const layout of ["row", "col"]) {
+    report.layouts[layout] = { max_feature_abs_diff: Math.max(...errs[layout].feat), max_prob_abs_diff: Math.max(...errs[layout].prob), decision_flips: errs[layout].dec };
+  }
+  report.max_landmark_abs_diff = lmErr;
+  report.matrix_max_abs_diff_if_data_is_rowmajor = matErrRow;
+  report.matrix_max_abs_diff_if_data_is_colmajor = matErrCol;
+  out.textContent = "PARITY " + JSON.stringify(report, null, 1);
+  fetch("/__report", { method: "POST", body: out.textContent }).catch(() => {});
+} catch (e) {
+  out.textContent = "PARITY_ERROR " + (e && e.stack || e);
+  fetch("/__report", { method: "POST", body: out.textContent }).catch(() => {});
+}
+</script>
+</body>
+</html>

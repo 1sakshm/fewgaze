@@ -2,3 +2,5 @@
 *.png binary
 *.pdf binary
 *.npz binary
+*.wasm binary
+*.task binary
