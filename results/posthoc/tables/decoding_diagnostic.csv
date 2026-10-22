@@ -1,0 +1,22 @@
+representation,label,target,r2,dim,n
+geometry,Geometry (9 MediaPipe features),gaze_h,0.7732577839378715,9,5880
+geometry,Geometry (9 MediaPipe features),gaze_v,0.43169551344331847,9,5880
+geometry,Geometry (9 MediaPipe features),head_pose,0.9649869771475246,9,5880
+dinov2_cls,"DINOv2-S CLS, face crop",gaze_h,-0.18514763200174555,384,5880
+dinov2_cls,"DINOv2-S CLS, face crop",gaze_v,-0.47092092148944786,384,5880
+dinov2_cls,"DINOv2-S CLS, face crop",head_pose,0.9481562176579701,384,5880
+dinov2_patchmean,"DINOv2-S mean-patch, face crop",gaze_h,-0.32083410489220476,384,5880
+dinov2_patchmean,"DINOv2-S mean-patch, face crop",gaze_v,-0.3178930205522703,384,5880
+dinov2_patchmean,"DINOv2-S mean-patch, face crop",head_pose,0.9408553241213553,384,5880
+dinov2_eyes,"DINOv2-S CLS, eye-region crop (P2)",gaze_h,-0.294329940105688,384,5880
+dinov2_eyes,"DINOv2-S CLS, eye-region crop (P2)",gaze_v,0.3374012705549657,384,5880
+dinov2_eyes,"DINOv2-S CLS, eye-region crop (P2)",head_pose,0.8565464736951269,384,5880
+l2cs_angles,"L2CS-Net (pitch, yaw)",gaze_h,0.22310622602898145,2,5880
+l2cs_angles,"L2CS-Net (pitch, yaw)",gaze_v,0.2825174524640194,2,5880
+l2cs_angles,"L2CS-Net (pitch, yaw)",head_pose,0.1552085904049536,2,5880
+l2cs_embed,L2CS-Net 2048-d features,gaze_h,0.452756956464492,2048,5880
+l2cs_embed,L2CS-Net 2048-d features,gaze_v,-0.040995653154768386,2048,5880
+l2cs_embed,L2CS-Net 2048-d features,head_pose,0.9286647878378687,2048,5880
+clip_embed,CLIP ViT-B/32 embedding,gaze_h,-0.7627280855784251,512,5880
+clip_embed,CLIP ViT-B/32 embedding,gaze_v,-1.0136798264762068,512,5880
+clip_embed,CLIP ViT-B/32 embedding,head_pose,0.24228342794501034,512,5880

@@ -1,0 +1,10 @@
+method,status,n
+clip_probe,ok,450
+clip_zeroshot,ok,5
+dinov2,ok,450
+dinov2_patchmean,ok,450
+geometry,ok,450
+geometry_linear,ok,450
+l2cs,ok,450
+l2cs_embed,ok,450
+l2cs_zeroshot,ok,5

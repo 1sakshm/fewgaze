@@ -141,4 +141,40 @@ Columbia Gaze.
 
 ## Deviations from this plan
 
-*(none at time of commit)*
+All deviations below were made **before the main experiment run** (`results/runs/LATEST`). None changes
+which comparisons are made or how a metric is defined.
+
+1. **2026-10-22, L2CS-Net weight source.** The upstream Google Drive folder returned HTTP 404. We
+   used the same Gaze360 checkpoint re-hosted as safetensors by Py-Feat (`py-feat/l2cs`). The checkpoint
+   loads into the re-declared official architecture with strict key matching (324 tensors).
+2. **2026-10-23, bootstrap implementation.** Subject resamples are now drawn as count vectors, and the
+   metric is evaluated in closed form (AUROC = cᵀAc / ((c·P)(c·N)); balanced accuracy from per-subject
+   TP/TN counts). This is mathematically identical to explicit resampling, which
+   `tests/test_metrics.py::test_closed_form_bootstrap_equals_explicit_resampling` checks to 1e-12. The
+   only reason for the change was speed (about 25× faster), so the prespecified 1,000 replicates are
+   feasible. Because the random draws are consumed differently, CI endpoints differ from a naive
+   implementation by Monte Carlo error only.
+3. **Observation recorded before any classifier result was seen** (from inspecting the cached L2CS
+   outputs): on Columbia, mean L2CS yaw falls monotonically with H, and pitch rises with V. At the
+   gaze-locked condition, however, the mean prediction is about (pitch −7°, yaw −6°) rather than (0, 0),
+   and mean yaw also shifts with head pose. The zero-shot "angle to camera" score was **not** changed in
+   response, because it is prespecified. This observation is reported to help interpret its result.
+
+## Post-hoc exploratory analyses (added after seeing the main results)
+
+These were **not** in the original plan. They are reported separately, labelled *post-hoc*, and never
+replace a prespecified result. Each was written down here before it was run.
+
+* **P1, 2026-10-23: linear decoding diagnostic.** After seeing the DINOv2 linear probe at chance, we
+  checked for an implementation error by measuring how well each cached representation linearly decodes
+  the continuous annotations H, V and head pose on unseen subjects. We used a ridge regression with
+  5-fold GroupKFold by subject; the ridge α was chosen by RidgeCV's internal leave-one-out, which can only
+  bias R² upward. Script: `scripts/posthoc_analyses.py`.
+* **P2, 2026-10-23: DINOv2 on an eye-region crop.** This asks whether the DINOv2 result reflects the
+  representation or the face-scale crop, in which each eye covers only a few 14-px patches. MediaPipe is
+  re-run on the cached 448² face crop, and a strip around both eyes is cut out: centred on the four eye
+  corners, width 1.5 × the outer-corner distance, aspect 8 : 3. The strip is resized to 336 × 126
+  (24 × 9 patches) and passed through the same frozen `facebook/dinov2-small`, using the CLS token
+  with a linear probe exactly as in the primary DINOv2 method. It is evaluated with the identical
+  folds, selections and statistics, in a separate run alongside Geometry and DINOv2 (face) for paired
+  comparison. Outputs: `results/posthoc/`.

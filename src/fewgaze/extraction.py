@@ -57,6 +57,8 @@ def method_registry(cfg: dict[str, Any]) -> dict[str, MethodSpec]:
         MethodSpec("clip_probe", "clip_embed", "trained", "clip", False, 1, label="CLIP ViT-B/32 (linear probe)"),
         MethodSpec("l2cs_zeroshot", "l2cs_angles", "zeroshot", "l2cs", True, label="L2CS-Net angle to camera (0 labels)"),
         MethodSpec("clip_zeroshot", "clip_zeroshot", "zeroshot", "clip", True, label="CLIP zero-shot prompts (0 labels)"),
+        # post-hoc P2 (docs/methodology.md); only enabled by configs/posthoc_eyes.yaml
+        MethodSpec("dinov2_eyes", "dinov2_eyes", "trained", "dinov2", False, 1, label="DINOv2-S eye-region CLS (post-hoc)"),
     ]
     family_enabled = {
         "geometry": m["geometry"].get("enabled", True),
@@ -67,6 +69,8 @@ def method_registry(cfg: dict[str, Any]) -> dict[str, MethodSpec]:
     out = {s.name: s for s in specs if family_enabled[s.family]}
     if not m.get("geometry_linear", {}).get("enabled", True):
         out.pop("geometry_linear", None)
+    if not m.get("dinov2_eyes", {}).get("enabled", False):
+        out.pop("dinov2_eyes", None)
     return out
 
 
@@ -86,6 +90,13 @@ def cache_keys(cfg: dict[str, Any], fingerprint: str) -> dict[str, str]:
         {"method": "clip", **{k: v for k, v in m["clip"].items() if k not in ("batch_size", "enabled")}, "crops": geo}, pre, fingerprint
     )
     keys["clip_embed"] = keys["clip_zeroshot"] = cl
+    eyes_cfg = m.get("dinov2_eyes", {})
+    keys["eyecrops"] = cache_key(
+        {"method": "eyecrops", "width_factor": eyes_cfg.get("width_factor"), "size": eyes_cfg.get("size"), "crops": geo}, pre, fingerprint
+    )
+    keys["dinov2_eyes"] = cache_key(
+        {"method": "dinov2_eyes", "model_id": m["dinov2"]["model_id"], "eyes": keys["eyecrops"]}, pre, fingerprint
+    )
     return keys
 
 
@@ -146,6 +157,42 @@ def run_geometry(cfg: dict[str, Any], records: pd.DataFrame, keys: dict[str, str
     return cache.finalize(ids, G.FEATURE_NAMES, meta)
 
 
+def run_eye_crops(cfg: dict[str, Any], records: pd.DataFrame, keys: dict[str, str], geometry: FeatureTable) -> tuple[FeatureTable, Path]:
+    """Post-hoc P2: eye strips cut from the cached face crops. Feature = strip width in pixels."""
+    from fewgaze import geometry as G
+    from fewgaze.embeddings import load_crop
+
+    c = cfg["methods"]["dinov2_eyes"]
+    size = (int(c["size"][0]), int(c["size"][1]))
+    cache = open_cache(cfg, keys, "eyecrops")
+    out_dir = cache_dir(cfg) / f"crops-eyes-{keys['eyecrops']}"
+    ids = records["sample_id"].tolist()
+    if cache.is_complete():
+        return cache.load(ids), out_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
+    ext = G.EyeStripExtractor(ensure_landmarker(cfg), cfg["preprocessing"])
+    valid = dict(zip(geometry.sample_ids, geometry.valid))
+    done = cache.done_ids()
+    prior = _prior_timing(cache)
+    t0, n = time.perf_counter(), 0
+    try:
+        for batch in batched([s for s in ids if s not in done], 128):
+            feats, st = [], []
+            for s in batch:
+                strip = ext.strip(load_crop(crop_dir(cfg, keys), s), float(c["width_factor"]), size) if valid[s] else None
+                if strip is not None:
+                    strip.save(out_dir / f"{s}.jpg", quality=95)
+                feats.append([float(size[0]) if strip is not None else np.nan])
+                st.append("ok" if strip is not None else "no_face_in_crop")
+            cache.write_chunk(batch, np.array(feats), st)
+            n += len(batch)
+            _save_timing(cache, prior, time.perf_counter() - t0, n)
+            log.info("eye crops: %d", n)
+    finally:
+        ext.close()
+    return cache.finalize(ids, ["strip_width"], {"timing": _timing(prior, time.perf_counter() - t0, n)}), out_dir
+
+
 def ensure_landmarker(cfg: dict[str, Any]) -> Path:
     from fewgaze.geometry import ensure_model
 
@@ -180,6 +227,7 @@ def run_appearance(
     factory: Callable[[], Callable[[list[Any]], dict[str, np.ndarray]]],
     batch_size: int,
     model_info: Callable[[Any], dict[str, Any]],
+    crops: Path | None = None,
 ) -> dict[str, FeatureTable]:
     from fewgaze.embeddings import load_crop
 
@@ -194,7 +242,7 @@ def run_appearance(
     todo = [s for s in ids if s not in done]
     log.info("%s: %d done, %d to process", list(outputs.values()), len(done), len(todo))
     model = factory()
-    crops = crop_dir(cfg, keys)
+    crops = crops or crop_dir(cfg, keys)
     dims: dict[str, int] = {}
     priors = {out: _prior_timing(c) for out, c in caches.items()}
     t0, n_img = time.perf_counter(), 0

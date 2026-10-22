@@ -1,5 +1,5 @@
 {
-  "created": "2026-10-22T18:14:29Z",
+  "created": "2026-10-22T19:17:46Z",
   "dataset_root": "D:\\Cactus\\fewgaze\\data\\raw\\Columbia Gaze Data Set",
   "manifest_fingerprint": "335876e2b2182213",
   "n_images": 5880,
@@ -49,8 +49,13 @@
   "expected_grid_size": 5880,
   "n_missing_grid_cells": 0,
   "missing_grid_cells": [],
-  "n_duplicate_content_groups": 0,
-  "duplicate_content_groups": {},
+  "n_duplicate_content_groups": 1,
+  "duplicate_content_groups": {
+    "1861b0db6f0d4f51cffb626aa3acbdee81ea6e81f1f56184b6cc1901b088ab78": [
+      "0007/0007_2m_-15P_-10V_0H.jpg",
+      "0007/0007_2m_-15P_-10V_5H.jpg"
+    ]
+  },
   "label_definition": {
     "positive": {
       "gaze_v": [

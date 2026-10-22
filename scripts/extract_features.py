@@ -19,13 +19,13 @@ from fewgaze.extraction import cache_keys, param_count, run_appearance, run_geom
 from fewgaze.utils import get_logger
 
 log = get_logger("fewgaze.extract")
-STAGES = ["geometry", "dinov2", "l2cs", "clip"]
+STAGES = ["geometry", "dinov2", "l2cs", "clip", "eyes"]
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", required=True)
-    ap.add_argument("--stages", nargs="+", choices=STAGES, default=STAGES)
+    ap.add_argument("--stages", nargs="+", choices=STAGES, default=STAGES[:4], help="'eyes' = post-hoc P2 stage")
     ap.add_argument("--limit", type=int, default=None, help="process only the first N images (smoke test)")
     args = ap.parse_args()
     cfg = load_config(args.config)
@@ -105,6 +105,30 @@ def main() -> int:
         int(m["clip"]["batch_size"]),
         lambda x: {"model_id": m["clip"]["model_id"], "params": param_count(x.model), "device": x.device},
     )
+
+    if "eyes" in args.stages and m.get("dinov2_eyes", {}).get("enabled", False):
+        try:
+            from fewgaze.embeddings import DinoV2Extractor
+            from fewgaze.extraction import run_eye_crops
+
+            eyes_table, eyes_dir = run_eye_crops(cfg, records, keys, geo)
+            size = (int(m["dinov2_eyes"]["size"][0]), int(m["dinov2_eyes"]["size"][1]))
+            tables.update(
+                run_appearance(
+                    cfg,
+                    records,
+                    keys,
+                    eyes_table,
+                    {"cls": "dinov2_eyes"},
+                    lambda: DinoV2Extractor(m["dinov2"]["model_id"], size),
+                    int(m["dinov2"]["batch_size"]),
+                    lambda x: {"model_id": m["dinov2"]["model_id"], "params": param_count(x.model), "device": x.device},
+                    crops=eyes_dir,
+                )
+            )
+        except Exception as exc:
+            failures.append("eyes")
+            log.error("stage eyes failed: %s %s", exc, traceback.format_exc(limit=3))
 
     if args.limit is None:
         write_extraction_summary(cfg, tables, output_dir(cfg) / "tables" / "extraction_summary.json")

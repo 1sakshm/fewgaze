@@ -74,7 +74,8 @@ def main() -> int:
     cat = allerr[(allerr["error"] != "") & allerr["method"].isin(trained)].groupby(["method", "error", "category"]).size()
     cat.rename("n").reset_index().to_csv(tdir / "error_category_counts.csv", index=False)
 
-    n_per = max(1, int(cfg["analysis"]["n_error_examples"]) // (2 * max(1, len([m for m in trained if reg[m].kind == "trained"]))))
+    n_trained = max(1, len([m for m in trained if reg[m].kind == "trained"]))
+    n_per = max(1, -(-int(cfg["analysis"]["n_error_examples"]) // (2 * n_trained)))  # ceil
     ex = pd.concat([select_examples(allerr[allerr["method"] == m], n_per) for m in trained if reg[m].kind == "trained"], ignore_index=True)
     cols = ["method", "sample_id", "subject", "head_pose", "gaze_v", "gaze_h", "label", "score", "score_sd", "error", "category"]
     ex[cols].to_csv(tdir / "error_examples.csv", index=False)

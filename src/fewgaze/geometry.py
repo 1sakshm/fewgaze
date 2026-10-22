@@ -143,3 +143,26 @@ class GeometryExtractor:
 
     def close(self) -> None:
         self.landmarker.close()
+
+
+def eye_strip(img: Image.Image, pts: np.ndarray, width_factor: float, out_size: tuple[int, int]) -> Image.Image:
+    """Post-hoc P2: an axis-aligned strip around both eyes (see docs/methodology.md)."""
+    idx = [EYES["right"]["corners"][0], EYES["right"]["corners"][1], EYES["left"]["corners"][0], EYES["left"]["corners"][1]]
+    cx, cy = pts[idx].mean(axis=0)
+    outer = float(np.linalg.norm(pts[EYES["right"]["corners"][0]] - pts[EYES["left"]["corners"][1]]))
+    w = outer * width_factor
+    h = w * out_size[1] / out_size[0]
+    box = (int(round(cx - w / 2)), int(round(cy - h / 2)), int(round(cx + w / 2)), int(round(cy + h / 2)))
+    return img.crop(box).resize(out_size, Image.Resampling.BICUBIC)
+
+
+class EyeStripExtractor(GeometryExtractor):
+    """Runs the landmarker on a cached face crop and returns the eye strip (or None)."""
+
+    def strip(self, crop: Image.Image, width_factor: float, out_size: tuple[int, int]) -> Image.Image | None:
+        arr = np.ascontiguousarray(np.asarray(crop.convert("RGB")))
+        res = self.landmarker.detect(self.mp.Image(image_format=self.mp.ImageFormat.SRGB, data=arr))
+        if not res.face_landmarks:
+            return None
+        pts = np.array([[q.x * crop.width, q.y * crop.height] for q in res.face_landmarks[0]])
+        return eye_strip(crop, pts, width_factor, out_size)

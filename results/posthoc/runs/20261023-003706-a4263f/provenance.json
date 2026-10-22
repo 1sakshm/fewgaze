@@ -1,0 +1,621 @@
+{
+  "run_id": "20261023-003706-a4263f",
+  "created": "2026-10-22T19:08:42Z",
+  "git_commit": "d26428d40121f90b4c670c959f369c1dc16952ce-dirty",
+  "config": {
+    "project": {
+      "name": "fewgaze",
+      "output_dir": "results/posthoc",
+      "cache_dir": "cache"
+    },
+    "dataset": {
+      "name": "columbia_gaze",
+      "root": "data/raw/Columbia Gaze Data Set",
+      "filename_regex": "^(?P<subject>\\d{4})_(?P<distance>\\d+)m_(?P<head_pose>-?\\d+)P_(?P<gaze_v>-?\\d+)V_(?P<gaze_h>-?\\d+)H\\.jpg$",
+      "subject_field": "subject",
+      "image_extensions": [
+        ".jpg",
+        ".jpeg"
+      ]
+    },
+    "labels": {
+      "positive": {
+        "gaze_v": [
+          0
+        ],
+        "gaze_h": [
+          0
+        ]
+      },
+      "negative": "all_other",
+      "exclude": [],
+      "exclude_sample_ids": [
+        "0007_2m_-15P_-10V_0H",
+        "0007_2m_-15P_-10V_5H"
+      ]
+    },
+    "splits": {
+      "n_folds": 5,
+      "seed": 20261108
+    },
+    "sampling": {
+      "budgets": [
+        5,
+        10,
+        25,
+        50,
+        100,
+        "all"
+      ],
+      "seeds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    },
+    "preprocessing": {
+      "decode_scale": 0.5,
+      "landmark_max_side": 1600,
+      "face_crop_margin": 0.25,
+      "face_crop_size": 448
+    },
+    "methods": {
+      "geometry": {
+        "enabled": true,
+        "landmarker_model_url": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+        "polynomial_degree": 2
+      },
+      "geometry_linear": {
+        "enabled": true
+      },
+      "dinov2": {
+        "enabled": true,
+        "model_id": "facebook/dinov2-small",
+        "representation": "cls",
+        "input_size": 224,
+        "batch_size": 32
+      },
+      "l2cs": {
+        "enabled": false,
+        "weights_path": "cache/weights/l2cs_gaze360_resnet50.safetensors",
+        "weights_url": "https://huggingface.co/py-feat/l2cs/resolve/main/l2cs_gaze360_resnet50.safetensors",
+        "num_bins": 90,
+        "bin_width_deg": 4,
+        "angle_offset_deg": 180,
+        "input_size": 448,
+        "batch_size": 16,
+        "polynomial_degree": 2
+      },
+      "clip": {
+        "enabled": false,
+        "model_id": "openai/clip-vit-base-patch32",
+        "batch_size": 64,
+        "positive_prompt": "A photograph of a person looking directly toward the camera.",
+        "negative_prompt": "A photograph of a person looking away from the camera."
+      },
+      "dinov2_eyes": {
+        "enabled": true,
+        "width_factor": 1.5,
+        "size": [
+          336,
+          126
+        ]
+      }
+    },
+    "classifier": {
+      "type": "logistic_regression",
+      "C": 1.0,
+      "class_weight": "balanced",
+      "max_iter": 5000,
+      "threshold": 0.5
+    },
+    "noise": {
+      "rates": [
+        0.1,
+        0.2,
+        0.3
+      ],
+      "budgets": [
+        10,
+        25,
+        50,
+        100
+      ],
+      "scheme": "class_balanced_symmetric_flip"
+    },
+    "statistics": {
+      "n_bootstrap": 1000,
+      "ci_level": 0.95,
+      "bootstrap_seed": 12345,
+      "paired_comparisons": [
+        [
+          "dinov2_eyes",
+          "dinov2"
+        ],
+        [
+          "dinov2_eyes",
+          "geometry"
+        ]
+      ]
+    },
+    "analysis": {
+      "focus_budget": 25,
+      "n_error_examples": 8
+    },
+    "_config_path": "D:\\Cactus\\fewgaze\\configs\\posthoc_eyes.yaml"
+  },
+  "config_hash": "a4263fe43c0613bc",
+  "manifest_fingerprint": "335876e2b2182213",
+  "cache_keys": {
+    "geometry": "ff0daffb393310c4",
+    "dinov2_cls": "980bc2ebe612d1b9",
+    "dinov2_patchmean": "980bc2ebe612d1b9",
+    "l2cs_angles": "d7e7b0c5b8f592fe",
+    "l2cs_embed": "d7e7b0c5b8f592fe",
+    "clip_embed": "41d6b039000cab3f",
+    "clip_zeroshot": "41d6b039000cab3f",
+    "eyecrops": "0d016520441e6467",
+    "dinov2_eyes": "4776bd446c502ea5"
+  },
+  "methods": {
+    "geometry": {
+      "name": "geometry",
+      "cache": "geometry",
+      "kind": "trained",
+      "family": "geometry",
+      "primary": true,
+      "poly": 2,
+      "columns": null,
+      "label": "Geometry (MediaPipe, poly-2 LR)"
+    },
+    "geometry_linear": {
+      "name": "geometry_linear",
+      "cache": "geometry",
+      "kind": "trained",
+      "family": "geometry",
+      "primary": false,
+      "poly": 1,
+      "columns": null,
+      "label": "Geometry (linear LR)"
+    },
+    "dinov2": {
+      "name": "dinov2",
+      "cache": "dinov2_cls",
+      "kind": "trained",
+      "family": "dinov2",
+      "primary": true,
+      "poly": 1,
+      "columns": null,
+      "label": "DINOv2-S CLS (linear probe)"
+    },
+    "dinov2_patchmean": {
+      "name": "dinov2_patchmean",
+      "cache": "dinov2_patchmean",
+      "kind": "trained",
+      "family": "dinov2",
+      "primary": false,
+      "poly": 1,
+      "columns": null,
+      "label": "DINOv2-S mean-patch (linear probe)"
+    },
+    "dinov2_eyes": {
+      "name": "dinov2_eyes",
+      "cache": "dinov2_eyes",
+      "kind": "trained",
+      "family": "dinov2",
+      "primary": false,
+      "poly": 1,
+      "columns": null,
+      "label": "DINOv2-S eye-region CLS (post-hoc)"
+    }
+  },
+  "runtime": {
+    "python": "3.11.17",
+    "platform": "Windows-10-10.0.22631-SP0",
+    "processor": "AMD64 Family 25 Model 80 Stepping 0, AuthenticAMD",
+    "numpy": "1.26.4",
+    "sklearn": "1.9.1",
+    "pandas": "3.0.6",
+    "torch": "2.5.1+cu121",
+    "transformers": "4.46.3",
+    "mediapipe": "0.10.21",
+    "cv2": "4.11.0",
+    "cuda": true,
+    "gpu": "NVIDIA GeForce RTX 3050 Laptop GPU"
+  },
+  "feature_meta": {
+    "geometry": {
+      "timing": {
+        "seconds": 735.6292376999991,
+        "n_images": 5880,
+        "seconds_per_image": 0.12510701321428555
+      },
+      "landmarker": "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+      "name": "geometry",
+      "key": "ff0daffb393310c4",
+      "n_samples": 5880,
+      "n_valid": 5880,
+      "created": "2026-10-22T18:28:03Z",
+      "complete": true
+    },
+    "dinov2_cls": {
+      "timing": {
+        "seconds": 203.6579307999982,
+        "n_images": 5880,
+        "seconds_per_image": 0.0346357025170065
+      },
+      "model_id": "facebook/dinov2-small",
+      "params": 22056576,
+      "device": "cuda",
+      "name": "dinov2_cls",
+      "key": "980bc2ebe612d1b9",
+      "n_samples": 5880,
+      "n_valid": 5880,
+      "created": "2026-10-22T18:31:55Z",
+      "complete": true
+    },
+    "dinov2_patchmean": {
+      "timing": {
+        "seconds": 203.6579307999982,
+        "n_images": 5880,
+        "seconds_per_image": 0.0346357025170065
+      },
+      "model_id": "facebook/dinov2-small",
+      "params": 22056576,
+      "device": "cuda",
+      "name": "dinov2_patchmean",
+      "key": "980bc2ebe612d1b9",
+      "n_samples": 5880,
+      "n_valid": 5880,
+      "created": "2026-10-22T18:31:59Z",
+      "complete": true
+    },
+    "dinov2_eyes": {
+      "timing": {
+        "seconds": 222.83966200000032,
+        "n_images": 5880,
+        "seconds_per_image": 0.037897901700680324
+      },
+      "model_id": "facebook/dinov2-small",
+      "params": 22056576,
+      "device": "cuda",
+      "name": "dinov2_eyes",
+      "key": "4776bd446c502ea5",
+      "n_samples": 5880,
+      "n_valid": 5880,
+      "created": "2026-10-22T19:06:35Z",
+      "complete": true
+    }
+  },
+  "protocol_seconds": 109.5567031999999,
+  "folds": [
+    {
+      "fold": 0,
+      "train_subjects": [
+        "0001",
+        "0002",
+        "0005",
+        "0006",
+        "0007",
+        "0009",
+        "0010",
+        "0011",
+        "0013",
+        "0014",
+        "0016",
+        "0017",
+        "0019",
+        "0021",
+        "0022",
+        "0023",
+        "0024",
+        "0025",
+        "0026",
+        "0027",
+        "0028",
+        "0029",
+        "0030",
+        "0031",
+        "0032",
+        "0033",
+        "0034",
+        "0036",
+        "0037",
+        "0038",
+        "0040",
+        "0041",
+        "0043",
+        "0044",
+        "0045",
+        "0046",
+        "0047",
+        "0048",
+        "0049",
+        "0050",
+        "0051",
+        "0052",
+        "0053",
+        "0054"
+      ],
+      "test_subjects": [
+        "0003",
+        "0004",
+        "0008",
+        "0012",
+        "0015",
+        "0018",
+        "0020",
+        "0035",
+        "0039",
+        "0042",
+        "0055",
+        "0056"
+      ],
+      "n_train": 4618,
+      "n_test": 1260
+    },
+    {
+      "fold": 1,
+      "train_subjects": [
+        "0001",
+        "0003",
+        "0004",
+        "0006",
+        "0007",
+        "0008",
+        "0009",
+        "0010",
+        "0011",
+        "0012",
+        "0013",
+        "0015",
+        "0016",
+        "0018",
+        "0019",
+        "0020",
+        "0022",
+        "0023",
+        "0024",
+        "0025",
+        "0026",
+        "0027",
+        "0028",
+        "0030",
+        "0033",
+        "0034",
+        "0035",
+        "0037",
+        "0039",
+        "0040",
+        "0041",
+        "0042",
+        "0043",
+        "0044",
+        "0045",
+        "0046",
+        "0047",
+        "0048",
+        "0049",
+        "0050",
+        "0051",
+        "0052",
+        "0053",
+        "0055",
+        "0056"
+      ],
+      "test_subjects": [
+        "0002",
+        "0005",
+        "0014",
+        "0017",
+        "0021",
+        "0029",
+        "0031",
+        "0032",
+        "0036",
+        "0038",
+        "0054"
+      ],
+      "n_train": 4723,
+      "n_test": 1155
+    },
+    {
+      "fold": 2,
+      "train_subjects": [
+        "0001",
+        "0002",
+        "0003",
+        "0004",
+        "0005",
+        "0006",
+        "0007",
+        "0008",
+        "0010",
+        "0011",
+        "0012",
+        "0014",
+        "0015",
+        "0016",
+        "0017",
+        "0018",
+        "0019",
+        "0020",
+        "0021",
+        "0022",
+        "0023",
+        "0024",
+        "0027",
+        "0028",
+        "0029",
+        "0031",
+        "0032",
+        "0035",
+        "0036",
+        "0037",
+        "0038",
+        "0039",
+        "0040",
+        "0042",
+        "0043",
+        "0044",
+        "0047",
+        "0048",
+        "0050",
+        "0051",
+        "0052",
+        "0053",
+        "0054",
+        "0055",
+        "0056"
+      ],
+      "test_subjects": [
+        "0009",
+        "0013",
+        "0025",
+        "0026",
+        "0030",
+        "0033",
+        "0034",
+        "0041",
+        "0045",
+        "0046",
+        "0049"
+      ],
+      "n_train": 4723,
+      "n_test": 1155
+    },
+    {
+      "fold": 3,
+      "train_subjects": [
+        "0001",
+        "0002",
+        "0003",
+        "0004",
+        "0005",
+        "0007",
+        "0008",
+        "0009",
+        "0010",
+        "0012",
+        "0013",
+        "0014",
+        "0015",
+        "0017",
+        "0018",
+        "0020",
+        "0021",
+        "0022",
+        "0024",
+        "0025",
+        "0026",
+        "0029",
+        "0030",
+        "0031",
+        "0032",
+        "0033",
+        "0034",
+        "0035",
+        "0036",
+        "0038",
+        "0039",
+        "0040",
+        "0041",
+        "0042",
+        "0043",
+        "0044",
+        "0045",
+        "0046",
+        "0048",
+        "0049",
+        "0051",
+        "0052",
+        "0054",
+        "0055",
+        "0056"
+      ],
+      "test_subjects": [
+        "0006",
+        "0011",
+        "0016",
+        "0019",
+        "0023",
+        "0027",
+        "0028",
+        "0037",
+        "0047",
+        "0050",
+        "0053"
+      ],
+      "n_train": 4723,
+      "n_test": 1155
+    },
+    {
+      "fold": 4,
+      "train_subjects": [
+        "0002",
+        "0003",
+        "0004",
+        "0005",
+        "0006",
+        "0008",
+        "0009",
+        "0011",
+        "0012",
+        "0013",
+        "0014",
+        "0015",
+        "0016",
+        "0017",
+        "0018",
+        "0019",
+        "0020",
+        "0021",
+        "0023",
+        "0025",
+        "0026",
+        "0027",
+        "0028",
+        "0029",
+        "0030",
+        "0031",
+        "0032",
+        "0033",
+        "0034",
+        "0035",
+        "0036",
+        "0037",
+        "0038",
+        "0039",
+        "0041",
+        "0042",
+        "0045",
+        "0046",
+        "0047",
+        "0049",
+        "0050",
+        "0053",
+        "0054",
+        "0055",
+        "0056"
+      ],
+      "test_subjects": [
+        "0001",
+        "0007",
+        "0010",
+        "0022",
+        "0024",
+        "0040",
+        "0043",
+        "0044",
+        "0048",
+        "0051",
+        "0052"
+      ],
+      "n_train": 4725,
+      "n_test": 1153
+    }
+  ],
+  "n_common_eligible": 5878
+}

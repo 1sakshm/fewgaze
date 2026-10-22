@@ -1,0 +1,38 @@
+{
+  "geometry": {
+    "tp": 183,
+    "fn": 97,
+    "fp": 2610,
+    "tn": 2988,
+    "budget": "25",
+    "seed": 0,
+    "n_images": 5878
+  },
+  "dinov2": {
+    "tp": 129,
+    "fn": 151,
+    "fp": 2536,
+    "tn": 3062,
+    "budget": "25",
+    "seed": 0,
+    "n_images": 5878
+  },
+  "l2cs": {
+    "tp": 162,
+    "fn": 118,
+    "fp": 2867,
+    "tn": 2731,
+    "budget": "25",
+    "seed": 0,
+    "n_images": 5878
+  },
+  "clip_zeroshot": {
+    "tp": 137,
+    "fn": 143,
+    "fp": 2474,
+    "tn": 3124,
+    "budget": "0",
+    "seed": -1,
+    "n_images": 5878
+  }
+}

@@ -153,7 +153,7 @@ def run_protocol(
         )
 
     def failed(spec: MethodSpec, base: dict[str, Any], status: str, err: str) -> None:
-        rec = {k: None for k in RESULT_FIELDS}
+        rec: dict[str, Any] = dict.fromkeys(RESULT_FIELDS)
         rec.update({"run_id": run_id, "method": spec.name, "kind": spec.kind, **base, "status": status, "error": err})
         records.append(rec)
 

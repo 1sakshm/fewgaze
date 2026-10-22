@@ -74,3 +74,23 @@ def test_bootstrap_resamples_whole_subjects():
     b = [FoldBlock(subj, y, {"m": s})]
     d = bootstrap(b, ["m"], metric_fn("auroc"), 50, seed=0)
     assert np.allclose(d["m"], 1.0)
+
+
+def test_closed_form_bootstrap_equals_explicit_resampling():
+    from fewgaze.statistics import metric_on_counts
+
+    rng = np.random.default_rng(3)
+    subj = np.repeat(np.array(["a", "b", "c", "d", "e"]), 7)
+    y = np.tile([1, 1, 0, 0, 0, 0, 0], 5)
+    row = np.round(rng.normal(size=len(y)) + y, 1)  # rounding creates ties
+    block = FoldBlock(subj, y, {"m": row[None, :]})
+    uniq = np.unique(subj)
+    for _ in range(20):
+        draw = rng.integers(0, len(uniq), len(uniq))
+        counts = np.bincount(draw, minlength=len(uniq)).astype(float)[None, :]
+        idx = np.concatenate([np.flatnonzero(subj == uniq[d]) for d in draw])
+        for name in ("auroc", "balanced_accuracy"):
+            fn = metric_fn(name, 0.5)
+            fast = metric_on_counts(block, row, counts, fn)[0]
+            slow = fn(y[idx], row[idx])
+            assert math.isclose(fast, slow, rel_tol=1e-12, abs_tol=1e-12) or (math.isnan(fast) and math.isnan(slow))

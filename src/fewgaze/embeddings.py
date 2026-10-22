@@ -22,12 +22,11 @@ def device_name() -> str:
     return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def to_tensor_batch(images: list[Image.Image], size: int):
+def to_tensor_batch(images: list[Image.Image], size: int | tuple[int, int]):
     import torch
 
-    arr = np.stack(
-        [np.asarray(im.convert("RGB").resize((size, size), Image.Resampling.BICUBIC), dtype=np.float32) / 255.0 for im in images]
-    )
+    wh = (size, size) if isinstance(size, int) else (int(size[0]), int(size[1]))
+    arr = np.stack([np.asarray(im.convert("RGB").resize(wh, Image.Resampling.BICUBIC), dtype=np.float32) / 255.0 for im in images])
     arr = (arr - IMAGENET_MEAN) / IMAGENET_STD
     return torch.from_numpy(arr.transpose(0, 3, 1, 2).copy())
 
@@ -35,7 +34,7 @@ def to_tensor_batch(images: list[Image.Image], size: int):
 class DinoV2Extractor:
     """Returns two representations per image: pooled CLS token and mean of patch tokens."""
 
-    def __init__(self, model_id: str, input_size: int):
+    def __init__(self, model_id: str, input_size: int | tuple[int, int]):
         import torch
         from transformers import AutoModel
 

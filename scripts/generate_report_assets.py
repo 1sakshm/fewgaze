@@ -19,33 +19,33 @@ import pandas as pd
 
 from fewgaze.config import REPO_ROOT, load_config, output_dir
 from fewgaze.extraction import method_registry
-from fewgaze.plots import FAMILY_COLOR, INK, INK2, apply_style, color_for, confusion_grid, learning_curve, save
+from fewgaze.plots import FAMILY_COLOR, INK, INK2, apply_style, bottom_legend, color_for, confusion_grid, learning_curve, save
 from fewgaze.utils import get_logger, read_json, write_json
 
 log = get_logger("fewgaze.assets")
 
 
 def fig_pipeline(path: Path) -> None:
-    fig, ax = plt.subplots(figsize=(11, 2.3))
+    fig, ax = plt.subplots(figsize=(13, 2.6))
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 22)
     ax.axis("off")
     steps = [
         ("Columbia Gaze\n5,880 images\n56 subjects", "data"),
-        ("Annotation audit\nV=0,H=0 → positive", "data"),
-        ("5 subject-disjoint\nfolds", "protocol"),
-        ("Frozen features\ngeometry · DINOv2\nL2CS-Net · CLIP", "model"),
-        ("Budget sampling\nk per class × 5 seeds\n(shared across methods)", "protocol"),
-        ("Logistic regression\n(train-only scaling)", "model"),
-        ("Held-out subjects\nAUROC · bal. acc.", "protocol"),
-        ("Learning curves\nsubject bootstrap\nerror analysis", "data"),
+        ("Annotation\naudit\nV=H=0 → positive", "data"),
+        ("5 subject-\ndisjoint\nfolds", "protocol"),
+        ("Frozen features\ngeometry\nDINOv2 · L2CS\nCLIP", "model"),
+        ("Budget sampling\nk per class\n× 5 seeds\n(shared)", "protocol"),
+        ("Logistic\nregression\n(train-only\nscaling)", "model"),
+        ("Held-out\nsubjects\nAUROC\nbal. acc.", "protocol"),
+        ("Learning curves\nsubject\nbootstrap\nerror analysis", "data"),
     ]
     col = {"data": "#f3f2ee", "protocol": "#e8f0fb", "model": "#fdeee6"}
     w, gap = 10.6, 1.9
     for i, (txt, kind) in enumerate(steps):
         x = 0.5 + i * (w + gap)
         ax.add_patch(plt.Rectangle((x, 3), w, 16, fc=col[kind], ec=INK2, lw=0.8))
-        ax.text(x + w / 2, 11, txt, ha="center", va="center", fontsize=7.4, color=INK)
+        ax.text(x + w / 2, 11, txt, ha="center", va="center", fontsize=8, color=INK, linespacing=1.35)
         if i < len(steps) - 1:
             ax.annotate(
                 "", xy=(x + w + gap - 0.2, 11), xytext=(x + w + 0.2, 11), arrowprops={"arrowstyle": "-|>", "color": INK2, "lw": 0.9}
@@ -88,8 +88,9 @@ def main() -> int:
         learning_curve(ax, curves, reg, primary, metric)
         ax.set_ylabel(ylab)
         ax.set_title(f"{ylab} vs. labelled examples per class")
-        ax.legend(fontsize=7.5, loc="lower right")
-        fig.text(0.01, -0.03, cap, fontsize=7, color=INK2)
+        bottom_legend(fig, ax, ncol=2, y=0.0)
+        cap_y = -0.2
+        fig.text(0.01, cap_y, cap, fontsize=7, color=INK2)
         save(fig, fdir / stem)
     if ablation:
         fig, axes = plt.subplots(1, 2, figsize=(11, 4.0), sharey=True)
@@ -107,9 +108,9 @@ def main() -> int:
         ]:
             learning_curve(ax, curves, reg, fam_methods, "auroc")
             ax.set_title(title)
-            ax.legend(fontsize=7, loc="lower right")
         axes[0].set_ylabel("AUROC")
-        fig.text(0.01, -0.03, cap, fontsize=7, color=INK2)
+        bottom_legend(fig, axes, ncol=3, y=0.0)
+        fig.text(0.01, -0.12, cap, fontsize=7, color=INK2)
         save(fig, fdir / "figS1_ablations_auroc")
 
     # Fig 5: label noise
@@ -135,9 +136,9 @@ def main() -> int:
             ax.set_xticks([0, 0.1, 0.2, 0.3])
             ax.axhline(0.5, color=INK2, lw=0.8, ls=":")
         axes[0].set_ylabel("AUROC (clean test labels)")
-        axes[-1].legend(fontsize=7, loc="lower left")
+        bottom_legend(fig, axes, ncol=4, y=0.0)
         fig.suptitle("Simulated annotation noise: class-balanced symmetric flips of training labels only", y=1.02, fontsize=10)
-        fig.text(0.01, -0.05, cap, fontsize=7, color=INK2)
+        fig.text(0.01, -0.1, cap, fontsize=7, color=INK2)
         save(fig, fdir / "fig5_label_noise")
 
     # Fig 6: head pose
@@ -168,17 +169,18 @@ def main() -> int:
                     label=reg[m].label,
                     mfc="white" if reg[m].kind == "zeroshot" else c,
                 )
-            r0 = q.drop_duplicates("head_pose").set_index("head_pose").loc[poses]
-            ax.set_xticks(
-                range(len(poses)), [f"{p:+d}°\nn={int(n)} ({int(k)}+)" for p, n, k in zip(poses, r0["n_images"], r0["n_pos"])], fontsize=7
-            )
-            ax.set_xlabel("head pose relative to camera (images, positives)")
+            ax.set_xticks(range(len(poses)), [f"{p:+d}°" for p in poses])
+            ax.set_xlabel("head pose relative to camera")
             ax.set_title("zero-shot methods and k = " + ("ALL" if b == "all" else b) + " per class")
             ax.axhline(0.5, color=INK2, lw=0.8, ls=":")
         axes[0].set_ylabel("AUROC within head pose")
-        axes[-1].legend(fontsize=6.5, loc="lower left")
+        bottom_legend(fig, axes, ncol=3, y=0.0)
         fig.text(
-            0.01, -0.08, "Bars: 95% subject-bootstrap CI (500 replicates). Scores pooled per fold within the pose.", fontsize=7, color=INK2
+            0.01,
+            -0.16,
+            f"Each pose: {int(hp['n_images'].min())}-{int(hp['n_images'].max())} test images incl. {int(hp['n_pos'].min())} positives (one per subject). AUROC within each test fold restricted to the pose, averaged over folds and seeds; bars = 95% subject-bootstrap CI (500 replicates).",
+            fontsize=7,
+            color=INK2,
         )
         save(fig, fdir / "fig6_head_pose")
 
@@ -186,11 +188,16 @@ def main() -> int:
     cm_path = tdir / "confusion_matrices.json"
     if cm_path.exists():
         cms = read_json(cm_path)
-        items = [
-            (f"{reg[m].label}\n(k={'0' if v['budget'] == '0' else v['budget']}, seed {v['seed']})", v) for m, v in cms.items() if m in reg
-        ]
-        fig, axes = plt.subplots(1, len(items), figsize=(3.0 * len(items), 3.0))
+        items = []
+        for m, v in cms.items():
+            if m in reg:
+                cond = "(no training labels)" if v["budget"] == "0" else f"(k={v['budget']} per class, seed {v['seed']})"
+                items.append((f"{reg[m].label}\n{cond}", v))
+        fig, axes = plt.subplots(1, len(items), figsize=(3.3 * len(items), 3.2))
         confusion_grid(np.atleast_1d(axes), items)
+        for ax in np.atleast_1d(axes)[1:]:
+            ax.set_yticklabels([])
+        fig.subplots_adjust(wspace=0.08)
         fig.suptitle("Confusion matrices on held-out subjects (row-normalised; threshold 0.5)", y=1.04, fontsize=10)
         save(fig, fdir / "fig7_confusion")
 
@@ -276,8 +283,9 @@ def main() -> int:
         for y, (v, d) in enumerate(zip(e1["extract_s_per_img"] * 1000, e1["extract_device"])):
             axes[0].text(v, y, f"  {v:.0f} ms ({d})", va="center", fontsize=7, color=INK)
         axes[0].set_xscale("log")
+        axes[0].set_xlim(right=float(e1["extract_s_per_img"].max()) * 1000 * 3.5)
         axes[0].set_xlabel("feature extraction time per image (ms, log scale)")
-        axes[0].set_title("Extraction cost (appearance models exclude the shared crop stage)")
+        axes[0].set_title("Feature extraction per image")
         e2 = eff[eff["fit_s_all"].notna()]
         axes[1].barh(e2["label"], e2["fit_s_all"], color=[color_for(m, f) for m, f in zip(e2["method"], e2["family"])], height=0.55)
         axes[1].set_xscale("log")
@@ -288,7 +296,7 @@ def main() -> int:
         fig.text(
             0.01,
             -0.05,
-            f"Hardware: {hw.get('gpu', 'CPU only')} / {hw.get('processor', '')}; geometry stage {float(geo_t.iloc[0]) * 1000 if len(geo_t) else float('nan'):.0f} ms/img incl. JPEG decode.",
+            f"Hardware: {hw.get('gpu', 'CPU only')} / {hw.get('processor', '')}; geometry stage {float(geo_t.iloc[0]) * 1000 if len(geo_t) else float('nan'):.0f} ms/img incl. JPEG decode. Appearance models (DINOv2, L2CS-Net, CLIP) read the shared face crop, so their end-to-end cost also includes that stage.",
             fontsize=7,
             color=INK2,
         )
@@ -348,7 +356,7 @@ def write_latex(curves, reg, primary, ablation, tdir, cfg) -> None:
     if pd_path.exists():
         d = pd.read_csv(pd_path, dtype={"budget": str})
         rows = [r"\begin{tabular}{llccc}", r"\toprule", r"Comparison & $k$ & $\Delta$AUROC & 95\% CI & CI excludes 0 \\", r"\midrule"]
-        for _, r in d.iterrows():
+        for _, r in d[d["budget"].isin(["5", "25", "all"])].iterrows():  # full table: paired_differences.csv
             rows.append(
                 f"{reg[r['method_a']].family} $-$ {reg[r['method_b']].family} & {'ALL' if r['budget'] == 'all' else r['budget']} & "
                 f"{r['delta_auroc']:+.3f} & [{r['ci_low']:+.3f}, {r['ci_high']:+.3f}] & {'yes' if r['excludes_zero'] else 'no'} \\\\"
@@ -397,6 +405,8 @@ def write_site_data(cfg, curves, reg, methods, tdir, out, prov) -> None:
         "error_categories": tab("error_category_counts.csv"),
         "confusion": read_json(tdir / "confusion_matrices.json") if (tdir / "confusion_matrices.json").exists() else {},
         "n_common_eligible": prov.get("n_common_eligible"),
+        "folds": [{"fold": f["fold"], "test_subjects": f["test_subjects"]} for f in prov.get("folds", [])],
+        "error_rates": tab("error_rates_by_condition.csv"),
     }
     p = REPO_ROOT / "site" / "data" / "results.json"
     write_json(data, p)

@@ -1,0 +1,27 @@
+{
+  "geometry": {
+    "status": "run",
+    "cache": "geometry",
+    "key": "ff0daffb393310c4"
+  },
+  "geometry_linear": {
+    "status": "run",
+    "cache": "geometry",
+    "key": "ff0daffb393310c4"
+  },
+  "dinov2": {
+    "status": "run",
+    "cache": "dinov2_cls",
+    "key": "980bc2ebe612d1b9"
+  },
+  "dinov2_patchmean": {
+    "status": "run",
+    "cache": "dinov2_patchmean",
+    "key": "980bc2ebe612d1b9"
+  },
+  "dinov2_eyes": {
+    "status": "run",
+    "cache": "dinov2_eyes",
+    "key": "4776bd446c502ea5"
+  }
+}

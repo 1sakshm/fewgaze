@@ -1,0 +1,116 @@
+# POST-HOC exploratory configuration (P2 in docs/methodology.md). Identical to experiment.yaml except
+# for the output directory, the disabled L2CS/CLIP families and the added dinov2_eyes method.
+# FewGaze experiment configuration.
+# Every experimental constant lives here; source code reads it via fewgaze.config.
+# Paths are relative to the repository root unless absolute.
+
+project:
+  name: fewgaze
+  output_dir: results/posthoc  # POST-HOC P2 run (docs/methodology.md); separate from the primary results
+  cache_dir: cache             # derived features (never committed)
+
+dataset:
+  name: columbia_gaze
+  root: "data/raw/Columbia Gaze Data Set"   # directory containing per-subject folders (as unzipped)
+  # Filenames look like 0001_2m_-15P_10V_-5H.jpg  (subject, distance, head pose, vertical gaze, horizontal gaze).
+  # The regex must define the named groups below; values are integers in degrees.
+  filename_regex: '^(?P<subject>\d{4})_(?P<distance>\d+)m_(?P<head_pose>-?\d+)P_(?P<gaze_v>-?\d+)V_(?P<gaze_h>-?\d+)H\.jpg$'
+  subject_field: subject
+  image_extensions: [.jpg, .jpeg]
+
+labels:
+  # Operational target: camera-directed gaze ("gaze-locked") under the Columbia capture protocol.
+  # Per Smith et al. (UIST 2013) the gaze angles are measured relative to the camera, so (V=0, H=0)
+  # is the gaze-locked condition for every head pose. See docs/dataset_card.md for the evidence.
+  positive:
+    gaze_v: [0]
+    gaze_h: [0]
+  # 'all_other' = every non-positive gaze condition is a negative.
+  # Alternatively give an explicit list of {gaze_v, gaze_h} conditions.
+  negative: all_other
+  # Conditions removed from the study entirely (kept in the audit as 'excluded').
+  # Empty by default; e.g. [{gaze_v: [0], gaze_h: [-5, 5]}] removes the near-camera negatives.
+  exclude: []
+  # Found by scripts/audit_dataset.py BEFORE any modelling: these two files are byte-identical (SHA-256)
+  # but annotated with different gaze directions, so at least one annotation is wrong and we cannot
+  # tell which. Both are negatives; both are excluded.
+  exclude_sample_ids:
+    - 0007_2m_-15P_-10V_0H
+    - 0007_2m_-15P_-10V_5H
+
+splits:
+  n_folds: 5
+  seed: 20261108                # fixed seed for subject-to-fold assignment
+
+sampling:
+  budgets: [5, 10, 25, 50, 100, all]   # labelled examples PER CLASS; 'all' = every eligible training example
+  seeds: [0, 1, 2, 3, 4]               # training-sample selection seeds (also seed model randomness)
+
+preprocessing:
+  decode_scale: 0.5             # JPEG draft decode factor before landmarking (5184x3456 -> 2592x1728)
+  landmark_max_side: 1600       # image is resized so its longer side is at most this before MediaPipe
+  face_crop_margin: 0.25        # bbox of face landmarks expanded by this fraction on every side
+  face_crop_size: 448           # square face crop saved to cache (shared by all appearance models)
+
+methods:
+  geometry:
+    enabled: true
+    landmarker_model_url: https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
+    polynomial_degree: 2        # prespecified: camera-directed gaze is a bounded region in gaze space
+  geometry_linear:
+    enabled: true               # ablation: same features, no polynomial expansion
+  dinov2:
+    enabled: true
+    model_id: facebook/dinov2-small
+    representation: cls         # pooled CLS token (layer-normed); alternatives are separate experiments
+    input_size: 224
+    batch_size: 32
+  l2cs:
+    enabled: false              # not needed for P2
+    # Official Gaze360 checkpoint (L2CSNet_gaze360.pkl), re-hosted as safetensors by Py-Feat:
+    # https://huggingface.co/py-feat/l2cs  (the upstream Google Drive folder returned 404 on 2026-10-22)
+    weights_path: cache/weights/l2cs_gaze360_resnet50.safetensors
+    weights_url: https://huggingface.co/py-feat/l2cs/resolve/main/l2cs_gaze360_resnet50.safetensors
+    num_bins: 90
+    bin_width_deg: 4
+    angle_offset_deg: 180
+    input_size: 448
+    batch_size: 16
+    polynomial_degree: 2
+  clip:
+    enabled: false              # not needed for P2
+    model_id: openai/clip-vit-base-patch32
+    batch_size: 64
+    # Prompts fixed BEFORE any evaluation; never tuned on test results.
+    positive_prompt: "A photograph of a person looking directly toward the camera."
+    negative_prompt: "A photograph of a person looking away from the camera."
+
+  dinov2_eyes:                  # post-hoc P2: DINOv2 on an eye-region strip
+    enabled: true
+    width_factor: 1.5           # strip width = 1.5 x outer-eye-corner distance
+    size: [336, 126]            # (w, h) = 24 x 9 patches of 14 px
+
+classifier:
+  type: logistic_regression
+  C: 1.0                        # prespecified, not tuned
+  class_weight: balanced
+  max_iter: 5000
+  threshold: 0.5                # prespecified decision threshold on the balanced-weight probability
+
+noise:
+  rates: [0.1, 0.2, 0.3]
+  budgets: [10, 25, 50, 100]    # balanced budgets only; see docs/methodology.md for why 'all' is excluded
+  scheme: class_balanced_symmetric_flip
+
+statistics:
+  n_bootstrap: 1000
+  ci_level: 0.95
+  bootstrap_seed: 12345
+  # Prespecified paired comparisons (difference in AUROC, method_a - method_b).
+  paired_comparisons:
+    - [dinov2_eyes, dinov2]
+    - [dinov2_eyes, geometry]
+
+analysis:
+  focus_budget: 25              # budget used for confusion matrices / error analysis
+  n_error_examples: 8

@@ -2,8 +2,8 @@
 data/raw/
 cache/
 results/figures/local_only/
-results/runs/*/predictions.csv.gz
-results/runs/*/selections.json.gz
+results/**/runs/*/predictions.csv.gz
+results/**/runs/*/selections.json.gz
 results/audit/manifest.csv
 results/extract_log.txt
 *.zip
@@ -32,3 +32,8 @@ report/*.synctex.gz
 # OS
 .DS_Store
 Thumbs.db
+results/run_log.txt
+results/posthoc_extract_log.txt
+results/posthoc_run_log.txt
+results/runs/*/predictions.csv.gz
+results/runs/*/selections.json.gz

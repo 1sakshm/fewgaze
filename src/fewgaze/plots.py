@@ -15,7 +15,13 @@ import pandas as pd  # noqa: E402
 # Validated categorical palette (dataviz reference palette, light mode), fixed slot order.
 # Colour follows the method FAMILY; zero-shot variants reuse the family hue with a dashed line.
 FAMILY_COLOR = {"geometry": "#2a78d6", "dinov2": "#eb6834", "l2cs": "#1baf7a", "clip": "#eda100"}
-ABLATION_COLOR = {"geometry_linear": "#e87ba4", "dinov2_patchmean": "#008300", "l2cs_embed": "#6250d6", "clip_probe": "#e34948"}
+ABLATION_COLOR = {
+    "geometry_linear": "#e87ba4",
+    "dinov2_patchmean": "#008300",
+    "l2cs_embed": "#6250d6",
+    "clip_probe": "#e34948",
+    "dinov2_eyes": "#6250d6",
+}
 INK, INK2, GRID = "#0b0b0b", "#52514e", "#e4e3df"
 ALL_X = 400.0  # x-position used for the 'all' budget on the log axis
 
@@ -52,6 +58,20 @@ def save(fig: plt.Figure, stem: Path) -> None:
     fig.savefig(stem.with_suffix(".png"))
     fig.savefig(stem.with_suffix(".pdf"))
     plt.close(fig)
+
+
+def bottom_legend(fig: plt.Figure, axes, ncol: int = 2, y: float = -0.02) -> None:
+    """One de-duplicated legend for the whole figure, placed below the axes so it never covers data."""
+    handles, labels = {}, []
+    for ax in np.atleast_1d(axes):
+        for h, lab in zip(*ax.get_legend_handles_labels()):
+            if lab not in handles:
+                handles[lab] = h
+                labels.append(lab)
+    if handles:
+        fig.legend(
+            [handles[lab] for lab in labels], labels, loc="upper center", bbox_to_anchor=(0.5, y), ncol=ncol, fontsize=8, frameon=False
+        )
 
 
 def color_for(method: str, family: str) -> str:

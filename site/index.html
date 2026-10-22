@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FewGaze</title>
+<meta name="description" content="A subject-independent study of how many labelled examples camera-directed gaze classification needs, comparing facial geometry, DINOv2, L2CS-Net and CLIP on the Columbia Gaze Data Set.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%231b1a17' stroke-width='2.5'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23b4441b'/%3E%3C/svg%3E">
+<script src="config.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="wrap">
+    <a class="wordmark" href="#top">FewGaze</a>
+    <nav class="toc" aria-label="Sections">
+      <a href="#question">Question</a><a href="#methods">Methods</a><a href="#protocol">Protocol</a>
+      <a href="#results">Results</a><a href="#errors">Errors</a><a href="#limitations">Limitations</a><a href="#reproduce">Reproduce</a>
+    </nav>
+    <button class="theme-btn" id="theme-btn" type="button" aria-label="Toggle light or dark theme">Theme</button>
+  </div>
+</header>
+
+<main id="top">
+<section class="hero">
+  <div class="wrap">
+    <p class="eyebrow">Research project · Columbia Gaze · subject-independent evaluation</p>
+    <h1>FewGaze</h1>
+    <p class="tagline">How little labelled data does eye-contact detection really need?</p>
+    <p class="summary">
+      FewGaze measures how classifiers that decide whether a person in a photo is looking at the camera
+      improve as the number of labelled examples grows. All four approaches use frozen models: interpretable
+      facial geometry, DINOv2 embeddings, a pretrained gaze estimator (L2CS-Net) and CLIP. Every approach
+      is evaluated on <strong>people it has never seen</strong>, with identical folds, identical training
+      samples and subject-level confidence intervals.
+    </p>
+    <div class="links">
+      <a class="btn" id="link-paper" href="#" hidden>Read the paper (PDF)</a>
+      <a class="btn secondary" id="link-code" href="#" hidden>Explore the code</a>
+      <a class="btn secondary" href="#results">View experiments</a>
+    </div>
+    <div class="hero-figures" data-needs-results hidden>
+      <div><div class="n" data-fill="dataset.n_images">–</div><div class="l">images</div></div>
+      <div><div class="n" data-fill="dataset.n_subjects">–</div><div class="l">people, split by identity</div></div>
+      <div><div class="n">5 × 5</div><div class="l">subject folds × sampling seeds</div></div>
+      <div><div class="n">5 → ALL</div><div class="l">labelled examples per class</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="question">
+  <div class="wrap">
+    <div class="section-head"><span class="num">01 · Question</span><h2>What is being classified, exactly?</h2></div>
+    <div class="body-grid"><div class="main prose">
+      <p>
+        Detecting when someone looks at a camera is useful for video calls, social robots and
+        human–computer interaction. Collecting labelled gaze data is slow, though, and models that look
+        accurate on the people they were trained on often fail on new faces. FewGaze asks a narrow question:
+        <strong>for each kind of representation, how many labelled examples per class does it take to recognise
+        camera-directed gaze in people who were never in the training set?</strong>
+      </p>
+      <p>
+        The label is <em>camera-directed gaze under controlled capture conditions</em>. In the Columbia Gaze
+        Data Set (Smith et al., UIST 2013), each subject's head rested in a chin rest. A camera at five
+        positions photographed them looking at a 7 × 3 grid of targets defined <em>relative to that camera</em>.
+        An image is positive when the gaze offset is (0°, 0°), which the authors call <em>gaze locking</em>,
+        and negative for the other 20 offsets, the closest of which is 5° to the side.
+      </p>
+      <div class="callout">
+        <strong>This is not interpersonal eye contact.</strong> Nobody in these images is talking to anyone.
+        Camera-directed gaze in a lab is a controlled proxy, and every conclusion on this page is limited to it.
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="methods">
+  <div class="wrap">
+    <div class="section-head"><span class="num">02 · Methods</span><h2>Four representations, one tiny classifier</h2></div>
+    <div class="body-grid"><div class="main">
+      <p class="prose">Every backbone is frozen. Only a regularised logistic regression with fixed hyperparameters is trained on the <em>k</em> labelled examples. All methods read the same MediaPipe face crop.</p>
+      <div class="table-scroll">
+      <table class="methods-table">
+        <thead><tr><th>Method</th><th>Input → representation</th><th>Downstream learning</th><th>Prior knowledge &amp; caveats</th></tr></thead>
+        <tbody>
+          <tr><td><span class="swatch" style="background:var(--s-geometry)"></span>Facial geometry</td><td>MediaPipe 478 landmarks → 9 features: iris offset along/across each eye, lid aperture, head rotation</td><td>degree-2 polynomial + logistic regression (positives sit at the <em>centre</em> of gaze space)</td><td>Interpretable and cheap. Its landmark model was trained on Google's face data, but it carries no gaze labels.</td></tr>
+          <tr><td><span class="swatch" style="background:var(--s-dinov2)"></span>DINOv2-S</td><td>224² crop → 384-d CLS embedding</td><td>linear probe</td><td>Self-supervised generic features, not gaze-specific.</td></tr>
+          <tr><td><span class="swatch" style="background:var(--s-l2cs)"></span>L2CS-Net</td><td>448² crop → predicted (pitch, yaw)</td><td>degree-2 polynomial + logistic regression; also a <strong>0-label</strong> score: angle to the camera axis</td><td>Trained with gaze labels on Gaze360, so it brings far more supervision than <em>k</em> suggests.</td></tr>
+          <tr><td><span class="swatch" style="background:var(--s-clip)"></span>CLIP ViT-B/32</td><td>crop + two fixed text prompts</td><td><strong>0-label</strong> zero-shot (prompts fixed before evaluation); a linear probe is an ablation</td><td>Exploratory. Generic image–text alignment.</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="protocol">
+  <div class="wrap">
+    <div class="section-head"><span class="num">03 · Protocol</span><h2>Built so that nothing leaks</h2></div>
+    <div class="body-grid"><div class="main">
+      <div class="protocol-grid">
+        <div class="card">
+          <h3>Subject-independent folds</h3>
+          <p>The people are dealt into five folds. Each row is one fold; the highlighted dots are its held-out test subjects. Nobody appears on both sides, and every person is tested exactly once.</p>
+          <div class="folds" id="fold-viz" data-needs-results hidden></div>
+        </div>
+        <div class="card">
+          <h3>Label budgets</h3>
+          <p><em>k</em> examples <strong>per class</strong>, drawn only from training subjects, nested across budgets and repeated for five seeds. Every method gets the <strong>same</strong> examples. Bar height uses a log scale; ALL is roughly 225 positives and 4,480 negatives.</p>
+          <div class="budget-bars" id="budget-viz" data-needs-results hidden></div>
+        </div>
+        <div class="card">
+          <h3>Fixed before results</h3>
+          <p>The classifier settings, the 0.5 threshold, the prompts and the paired comparisons were committed to git before the first experiment ran. There was no tuning on test subjects.</p>
+        </div>
+        <div class="card">
+          <h3>Metrics with honest uncertainty</h3>
+          <p>AUROC (primary) and balanced accuracy, averaged over 25 fold × seed runs. The 95 % intervals come from a <strong>subject</strong> bootstrap with 1,000 replicates, and test labels stay clean in every condition.</p>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="results">
+  <div class="wrap">
+    <div class="section-head"><span class="num">04 · Results</span><h2>Learning curves on unseen people</h2></div>
+    <div class="body-grid"><div class="main">
+      <div class="placeholder" data-no-results hidden>Experiments not yet run: <code>site/data/results.json</code> is missing. Run the pipeline (see Reproduce) to generate it.</div>
+      <div data-needs-results hidden>
+        <ol class="findings" id="findings"><!-- FINDINGS --></ol>
+
+        <div class="chart-card">
+          <div class="chart-head">
+            <h3>Performance vs. labelled examples per class</h3>
+            <div class="seg" role="group" aria-label="Metric">
+              <button type="button" data-metric="auroc" aria-pressed="true">AUROC</button>
+              <button type="button" data-metric="balanced_accuracy" aria-pressed="false">Balanced accuracy</button>
+            </div>
+          </div>
+          <div class="legend" id="lc-legend"></div>
+          <div class="chart" id="lc"></div>
+          <p class="caption">Points are means over 5 subject folds × 5 sampling seeds, and bands are 95 % subject-bootstrap intervals. Dashed lines are methods that use no FewGaze labels. ALL is every training-subject image (about 225 positives and 4,480 negatives); the shaded gap marks the jump in scale, and no line is drawn across it. Hover for values. The dotted line is chance.</p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head"><h3>AUROC table</h3><span class="muted small">hover a cell for its CI and balanced accuracy</span></div>
+          <div class="table-scroll" id="results-table"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head"><h3>Prespecified paired comparisons</h3></div>
+          <div class="table-scroll" id="paired-table"></div>
+          <p class="caption">ΔAUROC on identical bootstrap resamples of test subjects. "Beyond subject noise" means the 95 % interval excludes 0. It is not a significance test.</p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head"><h3>Ablations: which representation, and does the polynomial matter?</h3></div>
+          <div class="legend" id="lc-ablation-legend"></div>
+          <div class="chart" id="lc-ablation"></div>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head"><h3>Simulated label noise</h3><span class="muted small">training labels flipped, test labels clean</span></div>
+          <div class="legend" id="noise-legend"></div>
+          <div class="two-col" id="noise" style="grid-template-columns:repeat(auto-fit,minmax(240px,1fr))"></div>
+          <p class="caption">Exactly the stated fraction of each class's training labels is flipped, with the same flips for every method. This simulates annotation error; it does not estimate the real error rate in Columbia Gaze.</p>
+        </div>
+
+        <div class="chart-card">
+          <div class="chart-head">
+            <h3>Head pose</h3>
+            <div class="seg" role="group" aria-label="Budget">
+              <button type="button" data-pose="25" aria-pressed="true">k = 25</button>
+              <button type="button" data-pose="all" aria-pressed="false">k = ALL</button>
+            </div>
+          </div>
+          <div class="legend" id="pose-legend"></div>
+          <div class="chart" id="pose"></div>
+          <p class="caption">AUROC within each head pose (yaw of the camera relative to the head). Each pose has 56 positives, one per subject. Hollow markers are zero-shot methods.</p>
+        </div>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="errors">
+  <div class="wrap">
+    <div class="section-head"><span class="num">05 · Errors</span><h2>Where the classifiers say "looking at the camera"</h2></div>
+    <div class="body-grid"><div class="main">
+      <div data-needs-results hidden>
+        <p class="prose" id="error-text">Each cell shows the percentage of images in that gaze condition predicted as camera-directed, pooled over head poses, at <em>k</em> = 25. The outlined centre cell is the true positive class, so a perfect classifier would show 100 there and 0 everywhere else.</p>
+        <div class="heat-grid" id="heatmaps"></div>
+        <p class="caption">Dataset images are not shown because the Columbia Gaze licence does not permit redistribution. The repository includes a script that reproduces the example-error figure locally.</p>
+      </div>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="limitations">
+  <div class="wrap">
+    <div class="section-head"><span class="num">06 · Limitations</span><h2>What this study cannot tell you</h2></div>
+    <div class="body-grid"><div class="main">
+      <ul class="limit-list">
+        <li><strong>Camera-directed gaze ≠ eye contact</strong>The subjects looked at a lens or a dot in a lab, not at a conversation partner.</li>
+        <li><strong>56 people, one lab</strong>One background, one distance (2 m), a chin rest, and head yaw only. Generalisation beyond this setting is unknown.</li>
+        <li><strong>Unequal prior knowledge</strong>L2CS-Net was trained with gaze labels on Gaze360, so its <em>k</em> undercounts the supervision it received.</li>
+        <li><strong>No fairness analysis</strong>The dataset has no per-subject demographic labels, so subgroup performance was not and cannot be evaluated here.</li>
+        <li><strong>Label definition</strong>The negatives 5° to the side sit close to the positives, and individual fixation accuracy is unknown. One duplicated image pair with conflicting labels was found and removed.</li>
+        <li><strong>Not for monitoring</strong>Gaze detection can be misused for surveillance or attention scoring. These models are research artefacts and must not be used for such purposes.</li>
+      </ul>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="reproduce">
+  <div class="wrap">
+    <div class="section-head"><span class="num">07 · Reproduce</span><h2>Every number on this page comes from these commands</h2></div>
+    <div class="body-grid"><div class="main">
+<pre><code># Python 3.11; torch first (CUDA 12.1 shown; CPU also works)
+pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt &amp;&amp; pip install -e .
+
+# obtain the Columbia Gaze Data Set yourself (see data/README.md), then:
+python scripts/audit_dataset.py          --config configs/experiment.yaml
+python scripts/extract_features.py       --config configs/experiment.yaml
+python scripts/run_experiments.py        --config configs/experiment.yaml
+python scripts/analyze_errors.py         --config configs/experiment.yaml
+python scripts/generate_report_assets.py --config configs/experiment.yaml
+pytest   # 42 tests, synthetic data only</code></pre>
+      <p class="small muted" data-needs-results hidden>Results shown: run <span class="mono" data-fill="run_id">–</span>, generated <span data-fill="created">–</span>, commit <span class="mono" data-fill="git_commit">–</span>.</p>
+      <p class="small"><a data-repo href="#" hidden>Repository</a></p>
+    </div></div>
+  </div>
+</section>
+
+<section class="block" id="about" style="border-bottom:0">
+  <div class="wrap">
+    <div class="section-head"><span class="num">08 · About</span><h2>About this project</h2></div>
+    <div class="body-grid"><div class="main prose">
+      <p>FewGaze is an independent research project. The work is in the protocol: the folds and training samples are identical across methods, the analysis plan was committed before any result existed, the uncertainty respects subject identity, and the report is limited to what the data supports. It does not claim a new model.</p>
+    </div></div>
+  </div>
+</section>
+</main>
+
+<footer><div class="wrap">Code MIT. The Columbia Gaze Data Set © Columbia University is used for non-commercial research only (Smith, Yin, Feiner &amp; Nayar, UIST 2013). This page does not show any dataset images.</div></footer>
+<script src="app.js"></script>
+</body>
+</html>
