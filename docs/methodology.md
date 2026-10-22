@@ -218,3 +218,18 @@ constants. DINOv2 gives a 16×16 grid with 14 px patches; the others give 14×14
 
 **Decisions fixed now.** No layer or model is selected on test folds. All 5 × 13 × 2 cells are reported.
 Uncertainty: SD across the five folds. Comparisons with Study 1 are descriptive. Outputs: `results/study2/`.
+
+### Study 2: correction and added sensitivity analysis (2026-10-23, after the first probe layers)
+
+* **Correction of a statement in the pre-registration (procedure unchanged).** The plan said that choosing
+  the ridge α by RidgeCV's leave-one-*image*-out "can only make R² optimistic". That is wrong. Leave-one-image-out
+  keeps other images of the same person in the inner training set, so it can favour weak regularisation that fits
+  person-specific structure. On held-out people that structure does not transfer, and R² can come out
+  **pessimistic**, even below 0. The first probe layers showed exactly this (e.g. DINOv2-S CLS, layer 12:
+  R²(H) = −0.15). The same correction applies to post-hoc analysis P1.
+* **Sensitivity analysis S2-b (added after observing the above; reported separately).** We re-run the decoding
+  probe for the eye-patch representation at every layer of every model, plus the geometry reference, choosing α by
+  **3-fold person-grouped inner cross-validation** on the training people. The grid is 10⁰…10⁶, 7 values; the
+  solution is computed once per fold by SVD. Outer folds, targets and metric are unchanged. Output:
+  `results/study2/decoding_grouped_alpha.csv`. The primary pre-registered table is not replaced. If the two
+  analyses disagree, the paper reports both.

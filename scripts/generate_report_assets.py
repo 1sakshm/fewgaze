@@ -110,7 +110,7 @@ def main() -> int:
             ax.set_title(title)
         axes[0].set_ylabel("AUROC")
         bottom_legend(fig, axes, ncol=3, y=0.0)
-        fig.text(0.01, -0.12, cap, fontsize=7, color=INK2)
+        fig.text(0.01, -0.2, cap, fontsize=7, color=INK2)
         save(fig, fdir / "figS1_ablations_auroc")
 
     # Fig 5: label noise

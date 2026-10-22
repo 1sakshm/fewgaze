@@ -1,0 +1,4 @@
+model,layer,rep,target,r2_pooled,alpha_median
+geometry,-1,geometry,gaze_h,0.7766098123450329,10.0
+geometry,-1,geometry,gaze_v,0.44616686833315544,1000.0
+geometry,-1,geometry,head_pose,0.9660055145149895,1.0

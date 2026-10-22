@@ -1,0 +1,32 @@
+{
+  "eye_boxes": {
+    "n_ok": 5880,
+    "n": 5880
+  },
+  "dinov2_s": {
+    "hf_id": "facebook/dinov2-small",
+    "label": "DINOv2-S/14",
+    "params": 22056576,
+    "layers": 13,
+    "dim": 384,
+    "grid": 16,
+    "patch": 14,
+    "seconds": 124.70113090000086,
+    "seconds_per_image": 0.021207675323129397,
+    "eye_patches_per_image_mean": 9.083163265306123,
+    "eye_patches_per_image_min": 3
+  },
+  "dinov2_b": {
+    "hf_id": "facebook/dinov2-base",
+    "label": "DINOv2-B/14",
+    "params": 86580480,
+    "layers": 13,
+    "dim": 768,
+    "grid": 16,
+    "patch": 14,
+    "seconds": 495.2087470999977,
+    "seconds_per_image": 0.08421917467687036,
+    "eye_patches_per_image_mean": 9.083163265306123,
+    "eye_patches_per_image_min": 3
+  }
+}

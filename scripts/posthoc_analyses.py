@@ -2,7 +2,7 @@
 
 P1  Linear decoding diagnostic: how well does each cached representation linearly decode the continuous
     annotations (H, V, head pose) for unseen subjects? Ridge regression, 5-fold GroupKFold by subject;
-    alpha chosen by RidgeCV's internal leave-one-out (this can only make R^2 optimistic).
+    alpha chosen by RidgeCV's internal leave-one-image-out, which ignores person grouping and can make held-out R^2 optimistic or pessimistic (see docs/methodology.md, Study 2 correction).
 P2  Figure comparing DINOv2 on the face crop vs an eye-region crop, from the separate post-hoc run
     (`run_experiments.py --config configs/posthoc_eyes.yaml --no-noise`).
 

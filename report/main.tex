@@ -1,22 +1,25 @@
 \documentclass[10pt,twocolumn]{article}
-\usepackage[a4paper,margin=1.8cm,columnsep=0.7cm]{geometry}
+\usepackage[a4paper,margin=1.75cm,columnsep=0.65cm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage{newtxtext,newtxmath}
 \usepackage{microtype}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{amsmath}
-\usepackage[numbers,sort&compress]{natbib}
 \usepackage{xcolor}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage[hidelinks]{hyperref}
 \usepackage{caption}
+\usepackage{subcaption}
 \captionsetup{font=small,labelfont=bf}
 \setlength{\bibsep}{1pt}
 \graphicspath{{figures/}}
+\definecolor{cobalt}{HTML}{2A44F5}
+\newcommand{\ptodo}[1]{\textcolor{red}{[#1]}}
 
-\title{\Large\bfseries How Many Labels Does Eye-Contact Detection Need?\\
-A Subject-Independent Comparison of Geometric Features,\\ Visual Foundation Models, and Gaze Estimators}
-\author{FewGaze authors\\\small Code, configuration and all result files: \texttt{fewgaze} repository}
+\title{\Large\bfseries How Many Labels Does Eye-Contact Detection Need?\\[2pt]
+\large A Subject-Independent Comparison of Geometric Features, Visual Foundation Models,\\ and Gaze Estimators, and Where Gaze Lives Inside Foundation Models}
+\author{FewGaze authors\\\small Code, configurations, result files and a live demo: \texttt{fewgaze} repository}
 \date{}
 
 \begin{document}
@@ -24,226 +27,337 @@ A Subject-Independent Comparison of Geometric Features,\\ Visual Foundation Mode
 
 \begin{abstract}
 \noindent
-We measure how the number of labelled examples per class, $k$, affects classification of
-\emph{camera-directed gaze} on people unseen during training. We use the Columbia Gaze Data Set:
-5{,}878 images of 56 subjects after an audit removed one pair of duplicated images with conflicting
-annotations. Every method keeps its backbone frozen and trains only a fixed logistic-regression head:
-interpretable MediaPipe eye and head geometry, DINOv2-S embeddings, the L2CS-Net gaze estimator,
-and CLIP. All methods share identical subject-disjoint folds, identical training selections
-($k\in\{5,\dots,100,\text{ALL}\}$, five seeds) and a subject-level bootstrap.
-Nine geometric features with a degree-2 logistic regression were best at every budget:
-AUROC rose from $0.537$ at $k{=}5$ to $0.730$ at $k{=}100$ and $0.810$ with all training data.
-A linear probe on DINOv2 stayed at chance ($\le0.513$). Post-hoc diagnostics show that its embeddings
-encode head pose but not linearly decodable gaze.
-L2CS-Net's zero-label angle-to-camera score reached $0.595$; a trained head on its two output angles
-did not improve on it ($0.596$ at ALL). The task is hard: no method separated the 0° condition from the 5° neighbours
-reliably. The analysis plan was committed before any experiment ran.
+How many labelled images does a model need to recognise that a person it has never seen is looking into the
+camera? We study this question on the Columbia Gaze Data Set (5{,}878 images of 56 people after an audit removed a
+duplicated pair with conflicting annotations) under a protocol designed to rule out leakage: identity-disjoint folds,
+one shared set of training images per budget ($k\in\{5,10,25,50,100,\mathrm{ALL}\}$ per class, five seeds), a
+subject-level bootstrap, and an analysis plan committed to version control before the first experiment.
+\emph{Study~1} compares four frozen representations with a fixed logistic-regression head. Nine MediaPipe eye and
+head measurements with a quadratic boundary are the most label-efficient at every budget, reaching AUROC $0.537$ at
+$k{=}5$, $0.730$ at $k{=}100$ and $0.810$ with all data. A DINOv2 linear probe stays at chance ($\le 0.513$). The
+L2CS-Net gaze estimator scores $0.595$ without any labels, but a head trained on its two angles never improves on
+this, because its outputs carry a head-pose-dependent bias. A 5\textdegree{} gaze shift moves the iris by only
+$0.025$ eye-widths, against a between-person spread of $0.017$, which explains why no method separates the gaze-locked
+condition from its nearest neighbours.
+\emph{Study~2} (pre-registered) probes every layer of five frozen foundation models (DINOv2-S/B, CLIP, SigLIP, MAE)
+from the summary token and from eye-region patch tokens. \ptodo{Study 2 summary sentence, filled from results}.
+A browser demo reproduces the Python pipeline to within $4\times10^{-4}$ in probability.
 \end{abstract}
 
+% ------------------------------------------------------------------
 \section{Introduction}
-Knowing whether someone looks at a camera is useful for video-mediated communication, social robots
-and attentive interfaces. Detectors for eye contact in natural interaction exist~\cite{muller2018robust,zhang2017everyday},
-but building one for a new setting starts with collecting labels, and the payoff of each label depends on the
-representation it is spent on. Generic foundation models such as DINOv2~\cite{oquab2024dinov2} and
-CLIP~\cite{radford2021clip} are often assumed to be sample-efficient. Gaze estimators such as
-L2CS-Net~\cite{abdelrahman2023l2cs} encode gaze explicitly. Hand-crafted eye geometry is cheap and interpretable.
-How these compare when labels are scarce, and when evaluation is on \emph{new people}, is rarely
-measured directly.
+Knowing when someone looks at a camera matters for video-mediated communication, attentive user interfaces and
+social robots. Prior work detects eye contact with a camera~\cite{smith2013gazelocking}, with arbitrary objects
+without supervision~\cite{zhang2017everyday}, with mobile devices in everyday life~\cite{bace2020quantification}
+and between people in group conversations~\cite{muller2018robust,muller2021multimediate}. Each new setting needs
+labelled examples, and the value of each label depends on the representation that consumes it. Generic foundation
+models such as DINOv2~\cite{oquab2024dinov2} and CLIP~\cite{radford2021clip} are often expected to be
+sample-efficient. Dedicated gaze estimators encode gaze explicitly~\cite{abdelrahman2023l2cs,cheng2024survey}.
+Hand-crafted eye geometry is cheap and interpretable~\cite{kartynnik2019facemesh,ablavatski2020iris}. How these
+compare when labels are scarce, and when evaluation is on \emph{new people}, has rarely been measured directly.
 
-We study a deliberately narrow question: \emph{for each representation, how does held-out-subject
-performance grow with the number of labelled examples per class?} The target is \textbf{camera-directed
-gaze under controlled capture}, a proxy for eye contact and not interpersonal eye contact itself.
+We study a deliberately narrow target: \textbf{camera-directed gaze under controlled capture}, the ``gaze locking''
+condition of Smith et al.~\cite{smith2013gazelocking}. It is a proxy for eye contact, not interpersonal eye contact.
 Our contributions are:
-(i)~a leakage-tested, subject-independent label-budget protocol in which every method shares folds,
-training samples and test images, with the plan committed before the first run;
-(ii)~learning curves, a simulated label-noise study and a head-pose analysis for four frozen representation families;
-(iii)~diagnostics that explain the failure of generic embeddings.
+\begin{enumerate}\itemsep0pt
+\item a leakage-tested, subject-independent label-budget protocol in which every method shares folds, training
+images and test images, with the plan committed before the first run and an exact rerun from a clean commit;
+\item learning curves, paired comparisons, label-noise, head-pose and per-person analyses for four representation
+families (Study~1);
+\item a mechanistic account of the failures: the size of the 5\textdegree{} signal relative to person-to-person
+variation, identity-dominated foundation-model embeddings, and a head-pose-dependent bias in a pretrained gaze
+estimator;
+\item a pre-registered, layer- and token-resolved probe of five frozen foundation models for gaze under
+held-out-subject evaluation, linked to eye-contact classification (Study~2);
+\item an open, parity-tested in-browser demonstrator.
+\end{enumerate}
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_teaser.pdf}
+\caption{\textbf{What is measured.} The nine geometry features drawn on MediaPipe's canonical face mesh (a synthetic
+model; no participant is shown). Each eye contributes the iris offset along and across the corner-to-corner axis and
+the eyelid opening, all divided by eye width; three head-rotation angles complete the vector. Right: Columbia's
+$7\times3$ gaze targets per camera position; only the central target is positive.}
+\label{fig:teaser}
+\end{figure*}
+
+% ------------------------------------------------------------------
 \section{Related work}
-Smith et al.~\cite{smith2013gazelocking} introduced \emph{gaze locking} and the Columbia Gaze Data Set,
-detecting camera-directed gaze from rectified eye patches with PCA, MDA and an SVM.
-Zhang et al.~\cite{zhang2017everyday} detect eye contact with arbitrary targets by discovering
-gaze targets without supervision. Müller et al.~\cite{muller2018robust} combine gaze and speaking
-behaviour for eye contact in multi-person conversations. Unlike these works, we do not propose a
-detector; we measure sample efficiency under a shared protocol.
-Appearance-based gaze estimation has advanced through large datasets such as
-MPIIGaze~\cite{zhang2015mpiigaze,zhang2019mpiigaze}, Gaze360~\cite{kellnhofer2019gaze360} and
-ETH-XGaze~\cite{zhang2020ethxgaze}; Cheng et al.~\cite{cheng2024survey} survey the area.
-L2CS-Net~\cite{abdelrahman2023l2cs} regresses pitch and yaw with per-angle binned classification.
-For geometry we use MediaPipe~\cite{lugaresi2019mediapipe} face-mesh and iris
-landmarks~\cite{kartynnik2019facemesh,ablavatski2020iris}.
+\paragraph{Eye contact and gaze locking.}
+Smith, Yin, Feiner and Nayar introduced \emph{gaze locking}, passive detection of camera-directed gaze, together
+with the Columbia Gaze Data Set; they classified rectified eye patches with PCA, MDA and an SVM~\cite{smith2013gazelocking}.
+Zhang, Sugano and Bulling detected eye contact with arbitrary targets by discovering gaze targets without
+supervision~\cite{zhang2017everyday}; Sugano, Zhang and Bulling aggregated many viewers' gaze to estimate audience
+attention on public displays~\cite{sugano2016aggregaze}. B\^ace et al.\ quantified everyday attention to mobile devices
+with eye-contact detection on front-camera video~\cite{bace2020quantification}. M\"uller, Huang, Zhang and Bulling
+combined gaze and speaking behaviour to detect eye contact in multi-person conversation~\cite{muller2018robust},
+M\"uller et al.\ detected low rapport in small groups from non-verbal behaviour including gaze~\cite{muller2018detecting},
+and the MultiMediate challenge established eye-contact detection as a benchmark task~\cite{muller2021multimediate}.
+None of these works measures sample efficiency across representation families under a shared protocol.
 
+\paragraph{Appearance-based gaze estimation.}
+Sugano et al.\ trained person-independent 3D gaze estimators from synthesised eye images~\cite{sugano2014learning}.
+Zhang et al.\ introduced MPIIGaze for gaze estimation in the wild~\cite{zhang2015mpiigaze,zhang2019mpiigaze}, showed
+that full-face input with spatial weights improves accuracy~\cite{zhang2017fullface}, revisited the role of data
+normalisation~\cite{zhang2018revisiting}, compared appearance-based estimators with commercial eye trackers and
+discussed implications for applications~\cite{zhang2019evaluation}, and released ETH-XGaze for extreme head poses~\cite{zhang2020ethxgaze}.
+Gaze360 provides unconstrained 360\textdegree{} annotations~\cite{kellnhofer2019gaze360}, on which L2CS-Net trains
+per-angle binned classifiers~\cite{abdelrahman2023l2cs}. Park et al.\ estimated gaze from learned eye-region
+landmarks~\cite{park2018learning} and, in FAZE, adapted a person-specific estimator from as few as three calibration
+samples~\cite{park2019faze}. Cheng et al.\ survey and benchmark the field~\cite{cheng2024survey}. Our geometry
+baseline uses MediaPipe face-mesh and iris landmarks~\cite{lugaresi2019mediapipe,kartynnik2019facemesh,ablavatski2020iris}.
+
+\paragraph{Foundation models and gaze.}
+Self-supervised and image--text models (DINOv2~\cite{oquab2024dinov2}, CLIP~\cite{radford2021clip},
+SigLIP~\cite{zhai2023siglip}, MAE~\cite{he2022mae}) are widely used as frozen backbones. El Banani et al.\ probed such
+models for 3D awareness~\cite{elbanani2024probing}. For gaze, UniGaze argues that general-purpose self-supervised
+models designed for semantic tasks transfer poorly and pre-trains MAE-style on faces instead~\cite{qin2026unigaze};
+CLIP has been used to improve gaze generalisation through language~\cite{yin2024clipgaze}; and a frozen DINOv2 encoder
+supports gaze-\emph{target} estimation~\cite{ryan2025gazelle}. Closest to Study~2, a recent preprint probes frozen
+DINOv2, CLIP and SigLIP features for gaze on MPIIFaceGaze with a random image split~\cite{shkolnikov2026geometry}.
+We add held-out-subject evaluation, every layer, a contrast between the summary token and eye-region patches, and
+the link to eye-contact classification.
+
+% ------------------------------------------------------------------
 \section{Data and protocol}
 \paragraph{Dataset and label.}
-In Columbia Gaze~\cite{smith2013gazelocking}, 56 subjects sat in a chin rest at 2\,m while
-a camera moved to five positions, giving head poses of $0^\circ,\pm15^\circ,\pm30^\circ$ relative to the camera.
-At each position, subjects fixated a $7\times3$ grid of targets defined relative to that camera
-($H\in\{0,\pm5,\pm10,\pm15\}^\circ$, $V\in\{0,\pm10\}^\circ$). Positives are $H{=}V{=}0$,
-which the authors call gaze locking; all other cells are negatives, as in~\cite{smith2013gazelocking}.
-Our audit (\texttt{audit\_dataset.py}) confirmed 5{,}880 readable $5184{\times}3456$ JPEGs and a complete
-$56\times5\times21$ grid. It also found one byte-identical pair annotated with different horizontal gaze
-($-15$P$-10$V, $H{=}0$ vs.\ $5$, subject 0007); both were excluded before modelling.
-This leaves 280 positives and 5{,}598 negatives, a ratio of 1\,:\,20. The paper does not specify sign conventions;
-the binary label does not depend on them.
-
-\paragraph{Splits and budgets.}
-Subjects were dealt into five folds with a fixed seed (11--12 test subjects per fold). Automated
-tests verify subject-disjointness, full coverage and determinism. In each fold and for each seed
-$s\in\{0..4\}$, one permutation per class of the training subjects' images is drawn, and the first $k$
-are used. Budgets are therefore nested, and \textbf{every method receives the same samples}.
-ALL means every training-subject image (about 225 positives and 4{,}480 negatives).
-
-\paragraph{Representations (all frozen).}
-\emph{Geometry}: MediaPipe Face Landmarker (478 points) on the image downscaled to 1600\,px. For each eye
-we compute the iris-centre offset along and across the corner-to-corner axis and the lid aperture,
-each divided by eye width; we add three head-rotation angles from MediaPipe's face transform, for nine features.
-\emph{DINOv2-S}~\cite{oquab2024dinov2}: the CLS token of the 448\,px MediaPipe face crop resized to $224^2$.
-\emph{L2CS-Net}~\cite{abdelrahman2023l2cs} (ResNet-50, Gaze360 weights): (pitch, yaw) from the $448^2$ crop.
-We also use a \emph{zero-label} score: minus the angle between the predicted gaze and the camera axis.
-\emph{CLIP} ViT-B/32~\cite{radford2021clip}: zero-shot softmax over two prompts fixed in advance
-(``A photograph of a person looking directly toward / away from the camera.'').
-MediaPipe found a face in all 5{,}878 images, so every method sees the same images.
-
-\paragraph{Classifier, metrics, uncertainty.}
-Logistic regression (C$=$1, balanced class weights, threshold 0.5) inside a scikit-learn~\cite{pedregosa2011sklearn}
-pipeline fit on the training selection only. Hyperparameters were not tuned.
-The positive class lies at the \emph{centre} of gaze space, and no linear function of a monotone
-gaze proxy can isolate a centre. We therefore prespecified a degree-2 polynomial expansion for the
-low-dimensional geometry and L2CS features. Embeddings receive a standard linear probe.
-AUROC (primary) and balanced accuracy are averaged over the 25 fold$\times$seed runs.
-95\% CIs come from a fold-stratified \emph{subject} cluster bootstrap with 1{,}000 replicates and
-identical resamples for all methods, so differences are paired. The interval reflects which subjects
-were tested, not retraining variability.
+In Columbia Gaze~\cite{smith2013gazelocking}, 56 people sat in a chin rest 2\,m from a camera that moved between five
+positions (head poses $0^\circ$, $\pm15^\circ$, $\pm30^\circ$ relative to the camera) and fixated a $7\times3$ grid of
+targets defined relative to that camera ($H\in\{0,\pm5,\pm10,\pm15\}^\circ$, $V\in\{0,\pm10\}^\circ$; Fig.~\ref{fig:teaser}).
+Positives are $H{=}V{=}0$; the other 20 cells are negatives. Our audit confirmed 5{,}880 readable $5184{\times}3456$
+images in a complete grid, and found one byte-identical pair with conflicting horizontal-gaze annotations (subject
+0007); both images were excluded before modelling, leaving 280 positives and 5{,}598 negatives (1\,:\,20).
+Fig.~\ref{fig:composition} summarises the composition.
 
 \begin{figure}[t]
 \centering
+\includegraphics[width=\columnwidth]{fig2_dataset_composition.pdf}
+\caption{Dataset after the audit: images per head pose, labelled images per gaze cell, and per-person class counts.}
+\label{fig:composition}
+\end{figure}
+
+\paragraph{Splits, budgets and selections.}
+Subjects are dealt into five folds with a fixed seed (11--12 test people per fold); automated tests verify
+disjointness, coverage and determinism. For each fold and seed $s\in\{0..4\}$, one permutation per class of the
+training people's images is drawn and its first $k$ images are used. Budgets are therefore nested, and \textbf{every
+method receives the same images}. ALL is every training-person image (about 225 positives and 4{,}480 negatives).
+
+\paragraph{Representations (frozen) and classifier.}
+\emph{Geometry} uses nine MediaPipe features (Fig.~\ref{fig:teaser}). \emph{DINOv2-S}~\cite{oquab2024dinov2} uses the CLS
+token of a 448\,px face crop resized to $224^2$. \emph{L2CS-Net}~\cite{abdelrahman2023l2cs} (ResNet-50, Gaze360
+weights) gives (pitch, yaw) from the $448^2$ crop; we also score it without labels as minus the angle to the camera
+axis. \emph{CLIP} ViT-B/32~\cite{radford2021clip} is scored zero-shot with two prompts fixed in advance. Every trained
+method uses scikit-learn~\cite{pedregosa2011sklearn} logistic regression (C$=$1, balanced weights, threshold 0.5)
+inside a pipeline fit on training people only; hyperparameters were never tuned. Because the positive class is the
+\emph{centre} of gaze space, no linear function of a monotone gaze proxy can isolate it; a degree-2 expansion was
+therefore prespecified for the low-dimensional geometry and L2CS features, and embeddings get a linear probe.
+
+\paragraph{Metrics and uncertainty.}
+AUROC (primary) and balanced accuracy are averaged over 25 fold$\times$seed runs. 95\% intervals come from a
+fold-stratified \emph{subject} cluster bootstrap (1{,}000 replicates) computed in closed form
+($\mathrm{AUROC}=c^\top A c/[(c\cdot P)(c\cdot N)]$ for subject counts $c$; tested against explicit resampling to
+$10^{-12}$). The same resamples are used for every method, so differences are paired. Intervals reflect which people
+were tested, not retraining variability, which we report separately as the SD across runs.
+
+% ------------------------------------------------------------------
+\section{Study 1: how many labels?}
+\begin{figure}[t]
+\centering
 \includegraphics[width=\columnwidth]{fig3_learning_curves_auroc.pdf}
-\caption{AUROC on held-out subjects vs.\ labelled examples per class (log scale). Bands: 95\% subject-bootstrap CIs;
-dashed: methods that use no FewGaze labels. ALL (about 225 positives and 4{,}480 negatives) is plotted separately.}
+\caption{AUROC on held-out people versus labelled examples per class (log scale); bands are 95\% subject-bootstrap
+intervals, dashed lines use no FewGaze labels.}
 \label{fig:lc}
 \end{figure}
 
 \begin{table}[t]
-\centering\scriptsize
-\setlength{\tabcolsep}{3pt}
-\input{generated/table_auroc.tex}
-\caption{Mean AUROC over 5 folds $\times$ 5 seeds (CIs in \texttt{learning\_curves.csv}).
-Top: primary; middle: ablations; bottom: zero-label methods.}
+\centering\scriptsize\setlength{\tabcolsep}{2.6pt}
+esizebox{\columnwidth}{!}{\input{generated/table_auroc.tex}}
+\caption{Mean AUROC over 5 folds $\times$ 5 seeds. Top: primary methods; middle: ablations; bottom: no labels.}
 \label{tab:auroc}
 \end{table}
 
-\section{Results}
 \paragraph{Learning curves.}
-Geometry improved steadily with labels and led at every budget (Fig.~\ref{fig:lc}, Tab.~\ref{tab:auroc}):
-AUROC was $0.537$ [0.529, 0.545] at $k{=}5$, $0.601$ [0.592, 0.613] at $k{=}25$, $0.730$ [0.715, 0.751] at $k{=}100$
-and $0.810$ [0.791, 0.833] at ALL. Balanced accuracy was $0.527$, $0.578$, $0.686$ and $0.733$.
-All three prespecified paired differences excluded zero at every budget (Tab.~\ref{tab:paired}).
-For L2CS$-$DINOv2 at $k{=}5$ the lower bound was only just above zero.
-The DINOv2 linear probe stayed at chance across budgets ($0.499$--$0.513$).
-L2CS angles with a trained head rose from $0.512$ to $0.596$, matching but not improving on the zero-label
-L2CS score ($0.595$ [0.566, 0.630]). CLIP zero-shot reached $0.547$ [0.535, 0.563].
-For reference, geometry needed between 10 and 25 labels per class to match the zero-label L2CS score.
-\emph{Ablations}: without the polynomial, geometry stayed near chance ($0.504$--$0.555$), confirming the
-centre-region argument. L2CS's 2048-d features with a linear probe ($0.633$ at ALL) beat its two angles.
-Neither DINOv2 mean-patch tokens ($\le0.545$) nor a CLIP probe ($\le0.567$) approached geometry.
+Geometry led at every budget (Fig.~\ref{fig:lc}, Table~\ref{tab:auroc}): AUROC $0.537$ [0.529, 0.545] at $k{=}5$,
+$0.601$ [0.592, 0.613] at 25, $0.730$ [0.715, 0.751] at 100 and $0.810$ [0.791, 0.833] with all data (balanced accuracy
+$0.527$, $0.578$, $0.686$, $0.733$). Its curve was also the steepest, gaining 0.19 AUROC between 5 and 100 labels.
+All three prespecified paired comparisons excluded zero at every budget (Fig.~\ref{fig:forest}); for L2CS$-$DINOv2 at
+$k{=}5$ the lower bound is only just above zero. The DINOv2 linear probe stayed at chance ($0.499$--$0.513$). L2CS
+angles with a trained head rose from $0.512$ to $0.596$, matching but not improving on its zero-label score
+($0.595$ [0.566, 0.630]). CLIP zero-shot reached $0.547$ [0.535, 0.563]. Geometry needed between 10 and 25 labels per
+class to overtake the zero-label gaze estimator.
 
-\begin{table}[t]
-\centering\scriptsize
-\setlength{\tabcolsep}{3pt}
-\input{generated/table_paired.tex}
-\caption{Prespecified paired comparisons ($\Delta$AUROC, identical bootstrap resamples). Shown for $k\in\{5,25,\text{ALL}\}$; all budgets in \texttt{paired\_differences.csv}.}
-\label{tab:paired}
-\end{table}
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_forest.pdf}
+\caption{Prespecified paired differences ($\Delta$AUROC) at every budget, on identical bootstrap resamples.}
+\label{fig:forest}
+\end{figure}
 
-\paragraph{Where errors occur.}
-At $k{=}25$, geometry labelled 71.8\% of true positives as camera-directed. It did so for 67.7\% of the
-$|H|{=}5^\circ$ negatives, 50.8\% of the $|H|{\ge}10^\circ$ negatives and 43.2\% of the $V{=}\pm10^\circ$ negatives.
-Its separation therefore comes almost entirely from the larger offsets. This is consistent with Smith et al.'s
-estimate that their own detector tolerates about $\pm2.5^\circ$ horizontally~\cite{smith2013gazelocking}.
-L2CS shows the same pattern (67.9\% of positives vs.\ 69.6\% of $|H|{=}5^\circ$ negatives).
-
-\paragraph{Head pose.}
-With all training data, geometry's AUROC was $0.891$ at a frontal pose. It fell to $0.835$/$0.847$ at
-$\mp15^\circ$ and to $0.718$/$0.766$ at $\mp30^\circ$ (Fig.~\ref{fig:pose}; 56 positives per pose).
-The other methods' pose profiles were flatter, with overlapping CIs, at a much lower overall level.
+\paragraph{Ablations.}
+Removing the polynomial left geometry near chance ($0.504$--$0.555$), confirming the centre-of-gaze-space argument.
+L2CS's 2048-d penultimate features with a linear probe ($0.633$ at ALL) beat its two output angles, and neither DINOv2
+mean-patch tokens ($\le 0.545$) nor a CLIP probe ($\le 0.567$) approached geometry (Fig.~\ref{fig:ablations}).
 
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.8\textwidth]{fig6_head_pose.pdf}
-\caption{AUROC within each head pose at $k{=}25$ and ALL (hollow markers: zero-label methods). 56 positives per pose; bars are 95\% subject-bootstrap CIs.}
-\label{fig:pose}
+\includegraphics[width=0.95\textwidth]{figS1_ablations_auroc.pdf}
+\caption{Ablations: representation choices within each family.}
+\label{fig:ablations}
 \end{figure*}
+
+\paragraph{The 5\textdegree{} problem.}
+At $k{=}25$, geometry called 71.8\% of true positives camera-directed, but also 67.7\% of the $|H|{=}5^\circ$
+negatives, 50.8\% of $|H|{\ge}10^\circ$ negatives and 43.2\% of the $V{=}\pm10^\circ$ negatives
+(Fig.~\ref{fig:heat}). The reason is visible in the raw measurements (Fig.~\ref{fig:violin}): moving the gaze from
+0\textdegree{} to +5\textdegree{} shifts the median iris by $0.025$ eye-widths, while people already differ by $0.017$
+(interquartile range) at 0\textdegree. This is consistent with the $\pm2.5^\circ$ horizontal tolerance that Smith et
+al.\ estimated for their own detector~\cite{smith2013gazelocking}.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_iris_violin.pdf}
+\caption{\textbf{The 5\textdegree{} problem.} Mean iris offset per person (dots, $n{=}56$ per cell) at frontal head pose.
+The gaze-locked cell (red) overlaps heavily with its $\pm5^\circ$ neighbours.}
+\label{fig:violin}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figS2_prediction_rate_by_gaze.pdf}
+\caption{Share of images predicted camera-directed per gaze cell at $k{=}25$ (centre = true positives).}
+\label{fig:heat}
+\end{figure*}
+
+\paragraph{Head pose and label noise.}
+With all data, geometry's AUROC fell from $0.891$ at a frontal pose to $0.835$/$0.847$ at $\mp15^\circ$ and
+$0.718$/$0.766$ at $\mp30^\circ$ (Fig.~\ref{fig:pose}). Flipping training labels degraded geometry roughly in
+proportion to the flip rate (at $k{=}100$: $0.730\to0.695/0.656/0.602$ for 10/20/30\%; Fig.~\ref{fig:noise}); at
+$k{=}25$, 10\% noise ($0.582$) cost less than reducing the clean budget to $k{=}10$ ($0.564$).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig6_head_pose.pdf}
+\caption{AUROC within each head pose (56 positives per pose); hollow markers use no labels.}
+\label{fig:pose}
+\end{figure}
+
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.92\textwidth]{fig5_label_noise.pdf}
-\caption{Simulated label noise. Exactly the stated fraction of each class's training labels is flipped, with the same flips for all methods;
-test labels stay clean. Bands: 95\% subject-bootstrap CIs.}
+\caption{Simulated label noise: class-balanced flips of training labels only, identical across methods.}
 \label{fig:noise}
 \end{figure*}
 
-\paragraph{Label noise.}
-Flipping training labels (Fig.~\ref{fig:noise}) degraded geometry roughly in proportion to the flip rate:
-at $k{=}100$, AUROC fell from $0.730$ to $0.695$, $0.656$ and $0.602$ for 10/20/30\% flips.
-At $k{=}25$, 10\% noise ($0.582$) cost less than reducing the clean budget to $k{=}10$ ($0.564$).
-L2CS degraded less in absolute terms (from $0.575$ to $0.546$ at $k{=}100$), but from a much lower starting point.
-DINOv2 stayed at chance throughout.
+\paragraph{Why the gaze estimator saturates.}
+Fig.~\ref{fig:l2cs} plots L2CS-Net's raw outputs. Yaw tracks horizontal gaze, but at the gaze-locked target its
+mean ranges from $+1.6^\circ$ (head $-30^\circ$) to $-15^\circ$ (head $+30^\circ$): part of what it reports as gaze is
+head pose. Pitch tracks vertical gaze with a constant offset of roughly $-6^\circ$ to $-9^\circ$. Per person, the
+zero-label score ranges from AUROC $0.32$ to $0.94$ (SD $0.14$, versus $0.05$ for geometry; Fig.~\ref{fig:subject}),
+the signature of person-specific calibration error, which a pooled two-feature classifier cannot remove and
+which per-person adaptation in the style of FAZE~\cite{park2019faze} targets. The two methods fail on
+different people (Fig.~\ref{fig:subject}), which suggests, but does not establish, complementarity.
 
-\paragraph{Post-hoc diagnostics (not prespecified).}
-\emph{P1:} a subject-grouped ridge regression shows that DINOv2 CLS embeddings decode head pose almost perfectly
-(held-out-subject $R^2{=}0.95$) but do not decode $H$ or $V$ ($R^2{<}0$). The geometry features decode
-$H$ with $R^2{=}0.77$. The DINOv2 failure is therefore not a pipeline error: its global embedding of a
-face crop is dominated by pose and identity. Consistent with this, its four most confident errors came from just two subjects.
-\emph{P2:} feeding DINOv2 an eye-region crop instead raised AUROC at ALL from $0.513$ to $0.562$
-($\Delta{=}{+}0.049$ [0.021, 0.082]). That is still far below geometry ($\Delta{=}{-}0.248$), so resolution
-explains only part of the gap.
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.9\textwidth]{fig_l2cs_bias.pdf}
+\caption{\textbf{L2CS-Net is biased by head pose.} Mean frozen L2CS outputs on Columbia versus true gaze, per head
+pose. An unbiased estimator would pass through (0, 0) at the red line for every pose.}
+\label{fig:l2cs}
+\end{figure*}
 
-\paragraph{Cost.}
-On an RTX~3050 laptop GPU, feature extraction took 35\,ms (DINOv2), 33\,ms (L2CS) and 18\,ms (CLIP) per image,
-in addition to a shared 125\,ms CPU stage (JPEG decode, MediaPipe, cropping) that alone yields the geometry features.
-Fitting any head took $\le$4\,s even at ALL.
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\columnwidth]{fig_per_subject.pdf}
+\caption{Per-person AUROC: L2CS-Net without labels versus geometry at $k{=}25$.}
+\label{fig:subject}
+\end{figure}
 
+\paragraph{Why the foundation model fails.}
+A $t$-SNE of the embeddings (Fig.~\ref{fig:tsne}) shows DINOv2 collapsing each person into one tight cluster, split
+further by head pose: the nearest neighbour of an image is the same person in $>99.9\%$ of cases (86\% for geometry).
+A ridge decoder recovers head pose from the final CLS token with held-out-subject $R^2{=}0.95$ but not gaze ($R^2{<}0$).
+Feeding DINOv2 an eye-region crop instead (a post-hoc analysis) raised AUROC at ALL only from $0.513$ to $0.562$.
+Study~2 asks whether gaze is present anywhere inside such models.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=0.78\textwidth]{fig_tsne.pdf}
+\caption{$t$-SNE of 5{,}878 images. Top: coloured by person; bottom: by gaze condition.}
+\label{fig:tsne}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig7_confusion.pdf}
+\caption{Confusion matrices on held-out people (row-normalised), $k{=}25$, seed 0; CLIP uses no labels.}
+\label{fig:confusion}
+\end{figure*}
+
+% ------------------------------------------------------------------
+\section{Study 2: where does gaze live inside foundation models?}
+\label{sec:study2}
+\paragraph{Design (pre-registered).}
+We froze DINOv2-S/14, DINOv2-B/14~\cite{oquab2024dinov2}, CLIP ViT-B/16~\cite{radford2021clip},
+SigLIP-B/16~\cite{zhai2023siglip} and MAE ViT-B/16~\cite{he2022mae} (MAE with no masking and identity patch order),
+fed each the same $224^2$ face crop with its own normalisation, and cached two representations at every one of 13
+layers: the summary token (CLS; SigLIP has none, so the mean patch) and the mean of the patch tokens over each eye
+(eye boxes from MediaPipe landmarks re-detected on the crop, padded by 25\% of eye width). A ridge decoder ($\alpha$ by
+internal cross-validation) predicted $H$, $V$ and head pose on held-out people, using the same five folds; a linear
+logistic probe and a geometric readout $-(\hat H/\sigma_H)^2-(\hat V/\sigma_V)^2$ scored eye contact. The readout
+uses continuous gaze labels, which is more supervision than Study~1's binary labels. The nine geometry features were
+probed identically as a reference.
+
+\ptodo{Study 2 results paragraphs, figures fig\_s2\_layers, fig\_s2\_heat, fig\_s2\_readout and table: filled from results/study2.}
+
+% ------------------------------------------------------------------
+\section{An in-browser demonstrator}
+We exported the geometry classifier trained on all 5{,}878 images and re-implemented the feature code in JavaScript on
+MediaPipe tasks-vision 0.10.21 (the same face-landmark model file as the Python pipeline). On 24 images resized
+exactly as in Python, the browser matched Python to $5.5\times10^{-6}$ in landmark coordinates, $2\times10^{-3}$ in
+features and $4.3\times10^{-4}$ in probability, with no decision flips; the test also revealed that the library's
+transformation matrices are column-major, a detail whose mistreatment flipped 13 of 24 decisions. The demonstrator
+runs on camera frames or photos entirely on the client, flags inputs outside the training ranges, and states that it
+is a research artefact, not a detector.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig8_efficiency.pdf}
+\caption{Feature-extraction and training cost on one laptop (RTX 3050 laptop GPU).}
+\label{fig:eff}
+\end{figure*}
+
+% ------------------------------------------------------------------
 \section{Discussion}
-Under this protocol, the most sample-efficient representation was the simplest: nine geometric features, with
-the right inductive bias for a centre-of-gaze-space target. Its curve was also the steepest, gaining
-$0.19$ AUROC from $k{=}5$ to $k{=}100$. Generic self-supervised embeddings were not sample-efficient for this fine-grained,
-identity-confounded distinction. Their invariance to small appearance changes is the wrong prior for detecting
-a 5--10$^\circ$ eye rotation in an otherwise identical face.
-
-The gaze estimator illustrates the role of prior knowledge. Without any FewGaze label, L2CS ranked images
-better than any method trained on $k{\le}10$. Its learned head, however, gained nothing over the zero-label score.
-On Columbia, L2CS predictions at the gaze-locked condition are biased (mean $\approx(-7^\circ,-6^\circ)$),
-and per-subject zero-label AUROC ranged from $0.32$ to $0.94$. Its errors look like subject-specific
-calibration offsets that a pooled two-feature classifier cannot remove. Its $k$ also undercounts its supervision,
-since it was trained with gaze labels on Gaze360~\cite{kellnhofer2019gaze360}. The comparison is between
-off-the-shelf systems, not architectures.
-
-Even the best method did not resolve the dataset's hardest distinction, 0° vs.\ 5°. Absolute performance
-(AUROC $\le0.81$) is far from deployable, and it should not be compared with the per-image accuracies reported by
-Smith et al., who evaluated a different detector under a different protocol~\cite{smith2013gazelocking}.
+Under this protocol the most label-efficient representation was the simplest: nine geometric measurements with the
+right inductive bias for a target that sits at the centre of gaze space. Generic self-supervised embeddings were not
+label-efficient here because their dominant variation is identity and head pose, both irrelevant to the task. The gaze
+estimator shows the value and the limits of prior knowledge: it beats every method trained on ten labels or fewer
+without seeing a single FewGaze label, but its person- and pose-dependent bias caps what a pooled classifier can learn
+from its outputs. \ptodo{Study 2 discussion sentence.} No method resolved the dataset's hardest distinction,
+0\textdegree{} versus 5\textdegree, and absolute performance (AUROC $\le0.81$) is far from deployable; it is not
+comparable to the per-image accuracy reported by Smith et al., who evaluated a different detector under a different
+protocol~\cite{smith2013gazelocking}.
 
 \section{Limitations and ethics}
-Results hold for one controlled dataset: 56 people, one lab, 2\,m distance, yaw-only head pose and a chin rest.
-Camera-directed gaze in this setting is a proxy, not interpersonal eye contact.
-Per-subject fixation accuracy is unknown, and the nearest negatives are only 5° away.
-With 56 identities, CIs are subject-level approximations; they do not include retraining variance,
-which we report separately as the SD across runs.
-We kept prespecified settings, so other heads (e.g.\ non-linear probes on embeddings) might change
-the ranking of the embedding methods; our P2 result suggests the input crop matters too.
-The dataset has no per-subject demographic labels, so we make no fairness claims. Pretrained models carry the
-biases of their training data. Gaze sensing can be misused for surveillance or attention scoring.
-These classifiers are research artefacts and are unsuitable for monitoring or high-stakes use.
+Results hold for one controlled dataset: 56 people, one lab, 2\,m, yaw-only head pose, a chin rest. Camera-directed
+gaze is a proxy, not interpersonal eye contact, and individual fixation accuracy is unknown. Intervals capture
+subject sampling with models held fixed. Heads were fixed in advance; other probes might rank the embeddings
+differently. The dataset has no demographic labels, so we make no fairness claims, and pretrained models carry the
+biases of their training data. The dataset licence forbids redistribution, so no participant image appears in this
+paper. Gaze sensing can be misused for surveillance or attention scoring; our models are research artefacts and are
+unsuitable for monitoring or high-stakes use.
 
 \section{Conclusion}
-In a controlled, subject-independent setting, a handful of interpretable geometric features with a quadratic
-decision boundary made the best use of labels, from 5 per class to several thousand. A frozen generic
-embedding with a linear probe did not learn the task, and a pretrained gaze estimator mainly helped when no labels
-were available. The main open question is whether per-subject calibration of gaze estimators, or local
-eye-region representations, can resolve the last 5° that separates looking \emph{at} the camera from looking
-just past it.
+A handful of interpretable measurements with a quadratic boundary made the best use of labels, from 5 per class to
+several thousand; a frozen generic embedding with a linear probe did not learn the task, and a pretrained gaze
+estimator mainly helped when no labels were available. \ptodo{Study 2 conclusion.} The open question is whether
+person-specific calibration or eye-local representations can resolve the last 5\textdegree{} that separate looking
+\emph{at} the camera from looking just past it.
 
 \paragraph{Reproducibility.}
-The commands in the repository regenerate every number and figure. Images are not redistributed,
-per the dataset's terms.
+Every number, table and figure is regenerated by the commands in the repository from the recorded runs; the plans for
+both studies were committed before they ran; images are not redistributed.
 
 {\small
 \bibliographystyle{abbrvnat}
