@@ -36,12 +36,25 @@ function loadModel() {
   return modelPromise;
 }
 
+// The landmarker model is face_landmarker.task. Hosts that cannot serve that file type get the identical bytes
+// as base64 text (face_landmarker.task.b64.txt); either way MediaPipe receives the same buffer.
+async function modelBytes() {
+  const r = await fetch(new URL("face_landmarker.task", VENDOR)).catch(() => null);
+  if (r && r.ok) return new Uint8Array(await r.arrayBuffer());
+  const t = await fetch(new URL("face_landmarker.task.b64.txt", VENDOR));
+  if (!t.ok) throw new Error(`face model: HTTP ${t.status}`);
+  const bin = atob((await t.text()).trim());
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
 function loadLandmarker() {
   landmarkerPromise ||= (async () => {
-    const { FaceLandmarker } = await import(new URL("vision_bundle.mjs", VENDOR).href);
+    const [{ FaceLandmarker }, bytes] = await Promise.all([import(new URL("vision_bundle.mjs", VENDOR).href), modelBytes()]);
     return FaceLandmarker.createFromOptions(
       { wasmLoaderPath: new URL("vision_wasm_internal.js", VENDOR).href, wasmBinaryPath: new URL("vision_wasm_internal.wasm", VENDOR).href },
-      { baseOptions: { modelAssetPath: new URL("face_landmarker.task", VENDOR).href, delegate: "CPU" }, runningMode: "IMAGE", numFaces: 2, outputFacialTransformationMatrixes: true },
+      { baseOptions: { modelAssetBuffer: bytes, delegate: "CPU" }, runningMode: "IMAGE", numFaces: 2, outputFacialTransformationMatrixes: true },
     );
   })();
   landmarkerPromise.catch(() => { landmarkerPromise = null; });
