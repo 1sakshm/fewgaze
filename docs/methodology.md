@@ -178,3 +178,11 @@ replace a prespecified result. Each was written down here before it was run.
   with a linear probe exactly as in the primary DINOv2 method. It is evaluated with the identical
   folds, selections and statistics, in a separate run alongside Geometry and DINOv2 (face) for paired
   comparison. Outputs: `results/posthoc/`.
+
+## Reproducibility check (2026-10-23)
+
+The primary run `20261023-000805-20d2e4` was made from a working tree with uncommitted documentation and
+bootstrap changes (its provenance records `d26428d…-dirty`). After everything was committed, the protocol was
+re-run from the clean commit `3fbfc55` as run `20261023-005930-20d2e4`. All 3,160 per-run records and all 255
+summary rows (estimates, CI bounds, SDs) were **identical** (max |difference| = 0.0). `results/runs/LATEST`
+points to the clean run, and every reported number comes from it.

@@ -26,7 +26,7 @@ interpersonal eye contact**.
 
 ## Key findings
 
-Verified results from run `20261023-000805-20d2e4`. Values are mean AUROC over 5 subject folds × 5 seeds,
+Verified results from run `20261023-005930-20d2e4` (clean commit `3fbfc55`; it reproduces the earlier run `20261023-000805-20d2e4` bit-for-bit). Values are mean AUROC over 5 subject folds × 5 seeds,
 with 95 % subject-bootstrap CIs. Sources: `results/tables/learning_curves.csv` and `paired_differences.csv`.
 
 1. **Simple geometry was the most label-efficient method at every budget.** Nine MediaPipe eye and head

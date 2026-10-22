@@ -1,0 +1,47 @@
+{
+  "geometry": {
+    "status": "run",
+    "cache": "geometry",
+    "key": "ff0daffb393310c4"
+  },
+  "geometry_linear": {
+    "status": "run",
+    "cache": "geometry",
+    "key": "ff0daffb393310c4"
+  },
+  "dinov2": {
+    "status": "run",
+    "cache": "dinov2_cls",
+    "key": "980bc2ebe612d1b9"
+  },
+  "dinov2_patchmean": {
+    "status": "run",
+    "cache": "dinov2_patchmean",
+    "key": "980bc2ebe612d1b9"
+  },
+  "l2cs": {
+    "status": "run",
+    "cache": "l2cs_angles",
+    "key": "d7e7b0c5b8f592fe"
+  },
+  "l2cs_embed": {
+    "status": "run",
+    "cache": "l2cs_embed",
+    "key": "d7e7b0c5b8f592fe"
+  },
+  "clip_probe": {
+    "status": "run",
+    "cache": "clip_embed",
+    "key": "41d6b039000cab3f"
+  },
+  "l2cs_zeroshot": {
+    "status": "run",
+    "cache": "l2cs_angles",
+    "key": "d7e7b0c5b8f592fe"
+  },
+  "clip_zeroshot": {
+    "status": "run",
+    "cache": "clip_zeroshot",
+    "key": "41d6b039000cab3f"
+  }
+}
