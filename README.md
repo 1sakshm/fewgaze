@@ -68,6 +68,8 @@ using the same five folds. Sources: `results/study2/`.
 
 ## Live demo
 
+Live at **https://fewgaze.pages.dev**: camera and photo upload, with the paper at `/paper.pdf`.
+
 The project page ([`site/`](site/)) includes an in-browser demo of the best method. A visitor picks a face photo,
 and MediaPipe plus the exported geometry classifier return P(looking at the camera), the measured eye
 landmarks and warnings when the photo is outside the training conditions. The photo never leaves the browser.
@@ -155,6 +157,8 @@ python scripts/study2_nested_layer.py  --config configs/experiment.yaml   # post
 python scripts/paper_figures.py                                           # paper figures + Study 2 table
 python scripts/export_site_data.py                                        # site/data/extras.json
 python scripts/build_artifact.py --out <dir>                              # optional: package site/ as a single hosted page
+python scripts/build_pages.py --out <dir>                                 # static build for https://fewgaze.pages.dev (no dataset images)
+npx wrangler pages deploy <dir> --project-name fewgaze --branch main
 ```
 
 Every setting lives in [`configs/experiment.yaml`](configs/experiment.yaml). Feature caches are keyed by
