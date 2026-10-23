@@ -77,6 +77,8 @@ def main() -> int:
             "decoding": dec.round(4).to_dict(orient="records"),
             "readout": rd.drop(columns=["n"], errors="ignore").round(4).to_dict(orient="records"),
         }
+        if (s2 / "nested_layer_summary.csv").exists():
+            extras["study2"]["nested"] = pd.read_csv(s2 / "nested_layer_summary.csv").round(4).to_dict(orient="records")
     model = read_json(REPO_ROOT / "site" / "demo" / "model.json")
     extras["demo"] = model["cross_validated"]
     path = REPO_ROOT / "site" / "data" / "extras.json"

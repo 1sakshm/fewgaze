@@ -47,6 +47,25 @@ with 95 % subject-bootstrap CIs. Sources: `results/tables/learning_curves.csv` a
 
 ![Learning curves](results/figures/fig3_learning_curves_auroc.png)
 
+### Study 2 (pre-registered): where does gaze live inside foundation models?
+
+Ridge probes on every layer of DINOv2-S/B, CLIP ViT-B/16, SigLIP-B/16 and MAE ViT-B/16 (frozen). Two token
+types were probed: the summary token and the mean of the patch tokens over each eye. Scores are on held-out people,
+using the same five folds. Sources: `results/study2/`.
+
+7. **The summary token holds head pose, not gaze.** Its horizontal-gaze R² never rose above 0.00 at any layer of any
+   model. Final-layer head-pose R² was 0.92–0.97 for DINOv2 and MAE.
+8. **Eye-patch tokens do carry gaze, mostly in the middle layers.** The best layer reached R²(H) 0.21–0.58 and
+   R²(V) 0.45–0.68. Every model exceeds the geometry features on vertical gaze (0.44); none reaches them on
+   horizontal gaze (0.78). Most of this is lost by the last layer (CLIP 0.58 → 0.33, SigLIP 0.48 → 0.05). MAE, the
+   pixel-reconstruction model, is the exception and peaks at the last layer. Choosing the ridge α with person-grouped
+   CV (sensitivity analysis S2-b) raises all eye-token R² values (best R²(H) 0.51–0.64) and leaves the conclusions
+   unchanged.
+9. **Eye contact read out from decoded gaze.** At the best layer, chosen with hindsight, AUROC was 0.71–0.83 (CLIP
+   layer 8: 0.834; geometry: 0.813). Post-hoc analysis P3 picks the layer on training people only. With it, CLIP reached 0.827 against geometry's 0.816 under the same procedure (paired difference +0.011, fold SD 0.019, not distinguishable). The other four models trailed by 0.04–0.09. This readout is trained on continuous gaze angles, and its eye boxes come from MediaPipe, so it shows that the information is present; it is not a label-free alternative.
+
+![Study 2 layers](results/figures/fig_s2_layers.png)
+
 ## Live demo
 
 The project page ([`site/`](site/)) includes an in-browser demo of the best method. A visitor picks a face photo,
@@ -127,6 +146,15 @@ cd report && latexmk -pdf main.tex                                          # pa
 python scripts/extract_features.py --config configs/posthoc_eyes.yaml --stages eyes
 python scripts/run_experiments.py  --config configs/posthoc_eyes.yaml --no-noise
 python scripts/posthoc_analyses.py
+
+# Study 2 (layer probing; ~2 h extraction on a laptop GPU, ~3 h probes on CPU)
+python scripts/study2_extract.py       --config configs/experiment.yaml   # cache/study2/<model>.npz
+python scripts/study2_probe.py         --config configs/experiment.yaml   # results/study2/decoding.csv, readout.csv
+python scripts/study2_grouped_alpha.py --config configs/experiment.yaml   # sensitivity S2-b
+python scripts/study2_nested_layer.py  --config configs/experiment.yaml   # post-hoc P3 (layer chosen on training people)
+python scripts/paper_figures.py                                           # paper figures + Study 2 table
+python scripts/export_site_data.py                                        # site/data/extras.json
+python scripts/build_artifact.py --out <dir>                              # optional: package site/ as a single hosted page
 ```
 
 Every setting lives in [`configs/experiment.yaml`](configs/experiment.yaml). Feature caches are keyed by
@@ -152,6 +180,8 @@ schema is in [`results/README.md`](results/README.md).
 | 9 Error examples | `figures/local_only/` (**never committed**: dataset images) | `analyze_errors.py` |
 | S1–S3 Ablations, per-gaze-cell prediction rates, per-subject spread | `figS*` | `generate_report_assets.py` |
 | P1–P2 Post-hoc diagnostics | `results/posthoc/figures/` | `posthoc_analyses.py` |
+| Paper figures (teaser, iris shift, t-SNE, L2CS bias, forest, per-subject) | `results/figures/fig_*` | `paper_figures.py` |
+| Study 2 layer curves, heatmap, readout | `fig_s2_layers`, `fig_s2_heat`, `fig_s2_readout` | `paper_figures.py --only study2` |
 
 Result categories: everything under `results/tables` and `results/figures` is a **verified experimental result**
 from the run named in `results/runs/LATEST`. Everything under `results/posthoc/` is **post-hoc exploratory**.

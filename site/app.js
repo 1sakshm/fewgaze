@@ -501,11 +501,18 @@ function study2(extras) {
   const rd = s2.readout.filter((r) => r.model !== "geometry" && r.readout === "gaze_readout").sort((a, b) => b.auroc_mean - a.auroc_mean)[0];
   const geoRd = s2.readout.find((r) => r.model === "geometry" && r.readout === "gaze_readout");
   const items = [
-    bg && [bg.r2_pooled.toFixed(2), `best horizontal-gaze R² from a summary token (${s2.models[bg.model].label}, layer ${bg.layer})`],
+    bg && [bg.r2_pooled.toFixed(2), "best horizontal-gaze R² from a summary token, over every model and layer: no better than always guessing the average"],
     be && [be.r2_pooled.toFixed(2), `best horizontal-gaze R² from eye patches (${s2.models[be.model].label}, layer ${be.layer})`],
     geoRow("gaze_h") && [geoRow("gaze_h").r2_pooled.toFixed(2), "the same decoder on the nine geometry measurements"],
-    rd && [rd.auroc_mean.toFixed(3), `best eye-contact AUROC read out from any layer (${s2.models[rd.model].label}, ${rd.rep === "eyes" ? "eye patches" : "summary token"}, layer ${rd.layer})${geoRd ? `; geometry: ${geoRd.auroc_mean.toFixed(3)}` : ""}`],
-  ].filter(Boolean);
+    rd && [rd.auroc_mean.toFixed(3), `best eye-contact AUROC read out from any layer (${s2.models[rd.model].label}, ${rd.rep === "eyes" ? "eye patches" : "summary token"}, layer ${rd.layer}), picked with hindsight${geoRd ? `; geometry: ${geoRd.auroc_mean.toFixed(3)}` : ""}`],
+  ];
+  const nested = (s2.nested || []).filter((r) => r.model !== "geometry").sort((a, b) => b.auroc_mean - a.auroc_mean)[0];
+  const nGeo = (s2.nested || []).find((r) => r.model === "geometry");
+  if (nested && nGeo) {
+    const d = nested.delta_vs_geometry;
+    items.push([nested.auroc_mean.toFixed(3), `the same readout when the layer is chosen on training people only (${s2.models[nested.model].label}); geometry ${nGeo.auroc_mean.toFixed(3)}, paired difference ${d >= 0 ? "+" : "−"}${Math.abs(d).toFixed(3)} ± ${nested.delta_sd.toFixed(3)} (fold SD)`]);
+  }
+  items.splice(0, items.length, ...items.filter(Boolean));
   document.getElementById("s2facts").innerHTML = items.map(([b, s]) => `<article class="fact"><b>${b}</b><span>${s}</span></article>`).join("");
 }
 

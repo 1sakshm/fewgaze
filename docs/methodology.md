@@ -233,3 +233,13 @@ Uncertainty: SD across the five folds. Comparisons with Study 1 are descriptive.
   solution is computed once per fold by SVD. Outer folds, targets and metric are unchanged. Output:
   `results/study2/decoding_grouped_alpha.csv`. The primary pre-registered table is not replaced. If the two
   analyses disagree, the paper reports both.
+
+### Study 2: post-hoc analysis P3, readout with the layer chosen without test data (added 2026-10-23, after all probes)
+
+The primary Study 2 results report all 13 layers; quoting the best layer of a model is selection on test folds and is
+optimistic. This matters most for the readout, where the best CLIP eye-patch layer (0.834) exceeds the geometry
+reference (0.813). P3 picks the layer and the ridge α's inside each outer fold, using 3-fold person-grouped inner CV on
+the training people. The criterion is inner squared error of H/σ_H plus V/σ_V. P3 then scores the readout once on the
+held-out people. Geometry goes through the same procedure. Outputs: `results/study2/nested_layer.csv` and
+`nested_layer_summary.csv` (fold-mean AUROC, fold SD, and the per-fold paired difference against geometry). Script:
+`scripts/study2_nested_layer.py`. This analysis is post hoc and labelled as such.

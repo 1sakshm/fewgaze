@@ -11,6 +11,10 @@
 \usepackage[hidelinks]{hyperref}
 \usepackage{caption}
 \usepackage{subcaption}
+\usepackage{placeins}
+\raggedbottom
+\renewcommand{\topfraction}{0.9}\renewcommand{\dbltopfraction}{0.9}\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.75}\renewcommand{\dblfloatpagefraction}{0.75}
 \captionsetup{font=small,labelfont=bf}
 \setlength{\bibsep}{1pt}
 \graphicspath{{figures/}}
@@ -40,7 +44,7 @@ this, because its outputs carry a head-pose-dependent bias. A 5\textdegree{} gaz
 $0.025$ eye-widths, against a between-person spread of $0.017$, which explains why no method separates the gaze-locked
 condition from its nearest neighbours.
 \emph{Study~2} (pre-registered) probes every layer of five frozen foundation models (DINOv2-S/B, CLIP, SigLIP, MAE)
-from the summary token and from eye-region patch tokens. \ptodo{Study 2 summary sentence, filled from results}.
+from the summary token and from eye-region patch tokens. The summary token encodes head pose (final-layer $R^2$ up to $0.97$) but never horizontal gaze ($R^2{\le}0.00$ at every layer of every model). Mean eye-patch tokens in the middle layers do decode gaze (best-layer $R^2(V)$ $0.45$--$0.68$), and much of it is lost by the last layer. When the layer is chosen on training people only, reading eye contact out of CLIP's decoded gaze matches the geometry features (AUROC $0.827$ vs.~$0.816$, paired difference $+0.011$, fold SD $0.019$). This readout uses continuous gaze labels.
 A browser demo reproduces the Python pipeline to within $4\times10^{-4}$ in probability.
 \end{abstract}
 
@@ -172,7 +176,7 @@ intervals, dashed lines use no FewGaze labels.}
 
 \begin{table}[t]
 \centering\scriptsize\setlength{\tabcolsep}{2.6pt}
-esizebox{\columnwidth}{!}{\input{generated/table_auroc.tex}}
+\resizebox{\columnwidth}{!}{\input{generated/table_auroc.tex}}
 \caption{Mean AUROC over 5 folds $\times$ 5 seeds. Top: primary methods; middle: ablations; bottom: no labels.}
 \label{tab:auroc}
 \end{table}
@@ -295,6 +299,7 @@ Study~2 asks whether gaze is present anywhere inside such models.
 \end{figure*}
 
 % ------------------------------------------------------------------
+\FloatBarrier
 \section{Study 2: where does gaze live inside foundation models?}
 \label{sec:study2}
 \paragraph{Design (pre-registered).}
@@ -308,9 +313,83 @@ logistic probe and a geometric readout $-(\hat H/\sigma_H)^2-(\hat V/\sigma_V)^2
 uses continuous gaze labels, which is more supervision than Study~1's binary labels. The nine geometry features were
 probed identically as a reference.
 
-\ptodo{Study 2 results paragraphs, figures fig\_s2\_layers, fig\_s2\_heat, fig\_s2\_readout and table: filled from results/study2.}
+\paragraph{The summary token encodes head pose, not gaze.}
+Across all five models and all 13 layers, the summary token never decoded horizontal gaze better than a constant:
+its best held-out $R^2(H)$ was $0.00$, and from the middle layers onward it was negative (Fig.~\ref{fig:s2heat}, left).
+The same tokens decoded head pose well: final-layer $R^2(P)$ was $0.95$ (DINOv2-S), $0.92$ (DINOv2-B) and $0.97$ (MAE).
+The two language-aligned models lose head pose in their last layers ($R^2(P)$ $0.25$ for CLIP and $0.56$ for SigLIP,
+down from about $0.9$ in mid layers; Fig.~\ref{fig:s2layers}, right). Read out as eye contact, summary tokens stayed
+between $0.48$ and $0.64$ AUROC at every layer. The final DINOv2-S CLS token gave a linear-probe AUROC of $0.514$, matching
+Study~1's $0.513$ at ALL.
+
+\paragraph{Eye-patch tokens carry gaze, mostly in the middle layers.}
+Averaging the patch tokens over the two eyes changes the picture (Table~\ref{tab:s2}, Fig.~\ref{fig:s2layers}).
+At the patch-embedding layer, eye tokens decode nothing ($R^2(H)$ between $-0.07$ and $-0.02$). By the middle of
+the network they decode both gaze angles. The best layer reached $R^2(H)=0.21$--$0.58$ and $R^2(V)=0.45$--$0.68$. Every model's best
+layer exceeded the geometry features on vertical gaze ($0.44$), and none reached them on horizontal gaze ($0.78$).
+For four of the five models, gaze information peaks at layers 3--8 and then declines towards the output. CLIP's
+$R^2(H)$ falls from $0.58$ (layer 6) to $0.33$, SigLIP's from $0.48$ (layer 3) to $0.05$, and DINOv2-B's from $0.46$
+(layer 6) to $0.18$. MAE, trained to reconstruct pixels, is the exception: its $R^2(H)$ rises almost monotonically
+to $0.47$ at the last layer. This is consistent with the view that the training objective decides whether fine,
+task-irrelevant geometry survives to the output~\cite{elbanani2024probing}. Head pose is decodable from the eye tokens
+at every layer ($R^2(P)\ge0.91$ after layer 0), so the two quantities are entangled in the same tokens.
+
+\paragraph{Sensitivity to the choice of $\alpha$ (S2-b).}
+The pre-registration claimed that choosing $\alpha$ by leave-one-image-out could only inflate $R^2$. This was wrong:
+images of the same person remain in the inner training set, which favours weak regularisation that does not transfer
+to new people. We recorded the correction and re-ran the eye-token decoder with $\alpha$ chosen by person-grouped inner
+cross-validation (last column of Table~\ref{tab:s2}). $R^2$ rose at almost every layer. The best $R^2(H)$ became
+$0.51$--$0.64$ (DINOv2-S: $0.21\to0.51$), and final-layer values rose to $0.18$--$0.55$. The geometry reference did not move
+($0.776\to0.777$). The qualitative conclusions hold under both procedures: gaze is present in eye tokens and absent
+from summary tokens, CLIP's eye tokens decode most, and no model reaches geometry on $H$. The primary analysis
+underestimated the absolute level for high-dimensional representations.
+
+\paragraph{From decodable gaze to eye contact.}
+A linear logistic probe on the eye tokens, trained only on binary labels, reached at most $0.72$ AUROC (CLIP, layer 9;
+Fig.~\ref{fig:s2readout}, left). The geometric readout, which reuses the ridge decoder's $\hat H, \hat V$, did much better
+(right panel). Its best layer per model ranged from $0.71$ (DINOv2-S) to $0.83$ (CLIP, layer 8), and the geometry features
+scored $0.81$. The best-layer figures are selected on test folds, which our plan excluded. In a post-hoc analysis (P3)
+we therefore chose the layer and $\alpha$ inside each training fold by person-grouped CV. Under this procedure, CLIP selected layer 8 in four folds and layer 6 in one, and reached AUROC $0.827$ (fold SD $0.016$). DINOv2-B reached $0.777$, SigLIP $0.769$, DINOv2-S $0.732$ and MAE $0.727$. Geometry, run through the identical procedure, scored $0.816$ ($0.014$). CLIP's paired difference from geometry was $+0.011$ (fold SD $0.019$; positive in four of five folds), which five folds cannot distinguish from zero. The other models trailed geometry by $0.04$--$0.09$, and DINOv2-S, SigLIP and MAE did so in every fold. Two caveats apply. The eye boxes come from the same MediaPipe landmarks that the geometry features use, and the readout is trained on continuous gaze angles. So this is evidence that the information is present, not a label-free alternative to geometry.
+Gaze is linearly present in mid-level patch tokens of every model we probed. A generic classifier on the summary token,
+the common way of using these models, cannot reach it.
+
+\begin{table*}[t]
+\centering
+\caption{Study 2 summary. Held-out-subject $R^2$ of a ridge decoder (pooled over five subject-disjoint folds) and
+eye-contact AUROC of the gaze readout. ``max (layer)'' is the best of 13 layers and is therefore selected on test
+data (see P3). The last column uses person-grouped $\alpha$ selection (S2-b). The summary-token maxima of $0.00$ come
+from heavily regularised constant predictors.}
+\label{tab:s2}
+\resizebox{\textwidth}{!}{\input{generated/table_study2.tex}}
+\end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s2_layers.pdf}
+\caption{Layer-wise decoding on held-out people. Solid lines: eye-patch tokens; dashed lines: summary token (CLS, or
+mean patch for SigLIP). Dotted line: the nine geometry features. $R^2$ is clipped at $-0.2$ for display.}
+\label{fig:s2layers}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s2_heat.pdf}
+\caption{Horizontal-gaze $R^2$ for every model and layer. Left: summary token (never above $0.00$). Right: eye-patch
+tokens. Colour is clipped to $[0, 1]$.}
+\label{fig:s2heat}
+\end{figure*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s2_readout.pdf}
+\caption{Eye-contact AUROC on held-out people by layer, mean over five folds. Left: linear logistic probe on binary
+labels. Right: gaze readout from the ridge decoder (trained with continuous gaze labels). Dotted lines show the geometry
+features under the same probe: $0.555$ (left) and $0.813$ (right).}
+\label{fig:s2readout}
+\end{figure*}
 
 % ------------------------------------------------------------------
+\FloatBarrier
 \section{An in-browser demonstrator}
 We exported the geometry classifier trained on all 5{,}878 images and re-implemented the feature code in JavaScript on
 MediaPipe tasks-vision 0.10.21 (the same face-landmark model file as the Python pipeline). On 24 images resized
@@ -334,7 +413,7 @@ right inductive bias for a target that sits at the centre of gaze space. Generic
 label-efficient here because their dominant variation is identity and head pose, both irrelevant to the task. The gaze
 estimator shows the value and the limits of prior knowledge: it beats every method trained on ten labels or fewer
 without seeing a single FewGaze label, but its person- and pose-dependent bias caps what a pooled classifier can learn
-from its outputs. \ptodo{Study 2 discussion sentence.} No method resolved the dataset's hardest distinction,
+from its outputs. Study~2 locates the failure. Gaze is present in the mid-level eye-patch tokens of all five models, but the summary token drops it, and most models attenuate it in their final layers. The usual recipe, a linear probe on the last CLS token, therefore looks in the wrong place~\cite{elbanani2024probing}. No method resolved the dataset's hardest distinction,
 0\textdegree{} versus 5\textdegree, and absolute performance (AUROC $\le0.81$) is far from deployable; it is not
 comparable to the per-image accuracy reported by Smith et al., who evaluated a different detector under a different
 protocol~\cite{smith2013gazelocking}.
@@ -351,7 +430,7 @@ unsuitable for monitoring or high-stakes use.
 \section{Conclusion}
 A handful of interpretable measurements with a quadratic boundary made the best use of labels, from 5 per class to
 several thousand; a frozen generic embedding with a linear probe did not learn the task, and a pretrained gaze
-estimator mainly helped when no labels were available. \ptodo{Study 2 conclusion.} The open question is whether
+estimator mainly helped when no labels were available. Inside foundation models, gaze is not absent but misplaced. Mid-layer eye-patch tokens carry it, and read out through decoded gaze, CLIP's tokens match nine hand-built measurements. The open question is whether
 person-specific calibration or eye-local representations can resolve the last 5\textdegree{} that separate looking
 \emph{at} the camera from looking just past it.
 
@@ -359,6 +438,7 @@ person-specific calibration or eye-local representations can resolve the last 5\
 Every number, table and figure is regenerated by the commands in the repository from the recorded runs; the plans for
 both studies were committed before they ran; images are not redistributed.
 
+\FloatBarrier
 {\small
 \bibliographystyle{abbrvnat}
 \bibliography{references}

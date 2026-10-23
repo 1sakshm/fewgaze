@@ -422,6 +422,75 @@ def study2_figs(cfg):
     return True
 
 
+def study2_table(cfg):
+    """LaTeX summary of Study 2. 'max' columns pick the best layer using the test folds: descriptive, optimistic."""
+    s2 = output_dir(cfg) / "study2"
+    if not (s2 / "decoding.csv").exists():
+        return None
+    dec, rd = pd.read_csv(s2 / "decoding.csv"), pd.read_csv(s2 / "readout.csv")
+    grp = pd.read_csv(s2 / "decoding_grouped_alpha.csv") if (s2 / "decoding_grouped_alpha.csv").exists() else None
+    labels = {m.key: m.label for m in MODELS}
+
+    def best(df, **q):
+        x = df
+        for k, v in q.items():
+            x = x[x[k] == v]
+        return x.sort_values(x.columns[-1] if "auroc_mean" not in x else "auroc_mean").iloc[-1] if len(x) else None
+
+    rows = []
+    summary = {}
+    for mk in [m.key for m in MODELS if m.key in set(dec["model"])]:
+        d = dec[dec.model == mk]
+        last = int(d["layer"].max())
+        cell = {}
+        for rep in ("global", "eyes"):
+            for t in ("gaze_h", "gaze_v", "head_pose"):
+                q = d[(d.rep == rep) & (d.target == t)]
+                b = q.loc[q["r2_pooled"].idxmax()]
+                cell[(rep, t)] = (float(q[q.layer == last]["r2_pooled"].iloc[0]), float(b["r2_pooled"]), int(b["layer"]))
+            r = rd[(rd.model == mk) & (rd.rep == rep) & (rd.readout == "gaze_readout")]
+            b = r.loc[r["auroc_mean"].idxmax()]
+            cell[(rep, "readout")] = (float(r[r.layer == last]["auroc_mean"].iloc[0]), float(b["auroc_mean"]), int(b["layer"]))
+        if grp is not None:
+            g = grp[(grp.model == mk) & (grp.target == "gaze_h")]
+            if len(g):
+                b = g.loc[g["r2_pooled"].idxmax()]
+                cell[("grouped", "gaze_h")] = (float(g[g.layer == last]["r2_pooled"].iloc[0]), float(b["r2_pooled"]), int(b["layer"]))
+        summary[mk] = {f"{a}|{b}": v for (a, b), v in cell.items()}
+        f = lambda v: f"{v[0]:.2f}" if v[0] > -0.995 else "$<$-1"  # noqa: E731
+        mx = lambda v: f"{v[1]:.2f} ({v[2]})"  # noqa: E731
+        rows.append(
+            f"{labels[mk]} & {f(cell[('global', 'gaze_h')])} & {mx(cell[('global', 'gaze_h')])} & {f(cell[('eyes', 'gaze_h')])} & {mx(cell[('eyes', 'gaze_h')])} & "
+            f"{mx(cell[('eyes', 'gaze_v')])} & {f(cell[('global', 'head_pose')])} & {mx(cell[('eyes', 'readout')])}"
+            + (f" & {mx(cell[('grouped', 'gaze_h')])}" if ("grouped", "gaze_h") in cell else " & --")
+            + r" \\"
+        )
+    g = dec[dec.model == "geometry"].set_index("target")["r2_pooled"]
+    gr = rd[(rd.model == "geometry") & (rd.readout == "gaze_readout")]["auroc_mean"]
+    gg = grp[(grp.model == "geometry") & (grp.target == "gaze_h")]["r2_pooled"] if grp is not None else pd.Series(dtype=float)
+    rows.append(r"\midrule")
+    rows.append(
+        "9 geometry features & "
+        + r"\multicolumn{4}{c}{"
+        + f"{g['gaze_h']:.2f}"
+        + "} & "
+        + f"{g['gaze_v']:.2f} & {g['head_pose']:.2f} & {gr.iloc[0]:.3f} & "
+        + (f"{gg.iloc[0]:.2f}" if len(gg) else "--")
+        + r" \\"
+    )
+    head = [
+        r"\begin{tabular}{lcccccccc}",
+        r"\toprule",
+        r" & \multicolumn{2}{c}{$R^2(H)$, summary token} & \multicolumn{2}{c}{$R^2(H)$, eye patches} & $R^2(V)$, eyes & $R^2(P)$, token & eye-contact AUROC & $R^2(H)$, eyes \\",
+        r"Model & last layer & max (layer) & last layer & max (layer) & max (layer) & last layer & eyes, max (layer) & grouped $\alpha$, max \\",
+        r"\midrule",
+    ]
+    tex = "\n".join(head + rows + [r"\bottomrule", r"\end{tabular}"])
+    (REPO_ROOT / "report" / "generated" / "table_study2.tex").write_text(tex, encoding="utf-8")
+    (output_dir(cfg) / "study2" / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
+    return summary
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--config", default=str(REPO_ROOT / "configs" / "experiment.yaml"))
@@ -447,6 +516,7 @@ def main() -> int:
         per_subject_scatter(cfg)
     if run("study2"):
         study2_figs(cfg)
+        study2_table(cfg)
     if stats:
         p = output_dir(cfg) / "tables" / "paper_figure_stats.json"
         prev = json.loads(p.read_text()) if p.exists() else {}

@@ -28,5 +28,44 @@
     "seconds_per_image": 0.08421917467687036,
     "eye_patches_per_image_mean": 9.083163265306123,
     "eye_patches_per_image_min": 3
+  },
+  "clip_b16": {
+    "hf_id": "openai/clip-vit-base-patch16",
+    "label": "CLIP ViT-B/16",
+    "params": 85799424,
+    "layers": 13,
+    "dim": 768,
+    "grid": 14,
+    "patch": 16,
+    "seconds": 1438.4567319999987,
+    "seconds_per_image": 0.24463549863945558,
+    "eye_patches_per_image_mean": 5.531802721088435,
+    "eye_patches_per_image_min": 3
+  },
+  "siglip_b16": {
+    "hf_id": "google/siglip-base-patch16-224",
+    "label": "SigLIP-B/16",
+    "params": 92884224,
+    "layers": 13,
+    "dim": 768,
+    "grid": 14,
+    "patch": 16,
+    "seconds": 1380.7262895000022,
+    "seconds_per_image": 0.23481739617346975,
+    "eye_patches_per_image_mean": 5.531802721088435,
+    "eye_patches_per_image_min": 3
+  },
+  "mae_b16": {
+    "hf_id": "facebook/vit-mae-base",
+    "label": "MAE ViT-B/16",
+    "params": 85798656,
+    "layers": 13,
+    "dim": 768,
+    "grid": 14,
+    "patch": 16,
+    "seconds": 1308.429679500001,
+    "seconds_per_image": 0.22252205433673486,
+    "eye_patches_per_image_mean": 5.531802721088435,
+    "eye_patches_per_image_min": 3
   }
 }
