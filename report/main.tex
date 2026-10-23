@@ -23,7 +23,7 @@
 
 \title{\Large\bfseries How Many Labels Does Eye-Contact Detection Need?\\[2pt]
 \large A Subject-Independent Comparison of Geometric Features, Visual Foundation Models,\\ and Gaze Estimators, and Where Gaze Lives Inside Foundation Models}
-\author{FewGaze authors\\\small Code, configurations, result files and a live demo: \texttt{fewgaze} repository}
+\author{Saksham Sharma\\\small Code, results and paper: \url{https://github.com/1sakshm/fewgaze} \quad Live demo: \url{https://fewgaze.pages.dev}}
 \date{}
 
 \begin{document}
@@ -166,6 +166,7 @@ were tested, not retraining variability, which we report separately as the SD ac
 
 % ------------------------------------------------------------------
 \section{Study 1: how many labels?}
+\label{sec:study1}
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{fig3_learning_curves_auroc.pdf}
@@ -203,13 +204,6 @@ Removing the polynomial left geometry near chance ($0.504$--$0.555$), confirming
 L2CS's 2048-d penultimate features with a linear probe ($0.633$ at ALL) beat its two output angles, and neither DINOv2
 mean-patch tokens ($\le 0.545$) nor a CLIP probe ($\le 0.567$) approached geometry (Fig.~\ref{fig:ablations}).
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.95\textwidth]{figS1_ablations_auroc.pdf}
-\caption{Ablations: representation choices within each family.}
-\label{fig:ablations}
-\end{figure*}
-
 \paragraph{The 5\textdegree{} problem.}
 At $k{=}25$, geometry called 71.8\% of true positives camera-directed, but also 67.7\% of the $|H|{=}5^\circ$
 negatives, 50.8\% of $|H|{\ge}10^\circ$ negatives and 43.2\% of the $V{=}\pm10^\circ$ negatives
@@ -226,13 +220,6 @@ The gaze-locked cell (red) overlaps heavily with its $\pm5^\circ$ neighbours.}
 \label{fig:violin}
 \end{figure*}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{figS2_prediction_rate_by_gaze.pdf}
-\caption{Share of images predicted camera-directed per gaze cell at $k{=}25$ (centre = true positives).}
-\label{fig:heat}
-\end{figure*}
-
 \paragraph{Head pose and label noise.}
 With all data, geometry's AUROC fell from $0.891$ at a frontal pose to $0.835$/$0.847$ at $\mp15^\circ$ and
 $0.718$/$0.766$ at $\mp30^\circ$ (Fig.~\ref{fig:pose}). Flipping training labels degraded geometry roughly in
@@ -245,13 +232,6 @@ $k{=}25$, 10\% noise ($0.582$) cost less than reducing the clean budget to $k{=}
 \caption{AUROC within each head pose (56 positives per pose); hollow markers use no labels.}
 \label{fig:pose}
 \end{figure}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=0.92\textwidth]{fig5_label_noise.pdf}
-\caption{Simulated label noise: class-balanced flips of training labels only, identical across methods.}
-\label{fig:noise}
-\end{figure*}
 
 \paragraph{Why the gaze estimator saturates.}
 Fig.~\ref{fig:l2cs} plots L2CS-Net's raw outputs. Yaw tracks horizontal gaze, but at the gaze-locked target its
@@ -270,13 +250,6 @@ pose. An unbiased estimator would pass through (0, 0) at the red line for every 
 \label{fig:l2cs}
 \end{figure*}
 
-\begin{figure}[t]
-\centering
-\includegraphics[width=0.85\columnwidth]{fig_per_subject.pdf}
-\caption{Per-person AUROC: L2CS-Net without labels versus geometry at $k{=}25$.}
-\label{fig:subject}
-\end{figure}
-
 \paragraph{Why the foundation model fails.}
 A $t$-SNE of the embeddings (Fig.~\ref{fig:tsne}) shows DINOv2 collapsing each person into one tight cluster, split
 further by head pose: the nearest neighbour of an image is the same person in $>99.9\%$ of cases (86\% for geometry).
@@ -291,17 +264,27 @@ Study~2 asks whether gaze is present anywhere inside such models.
 \label{fig:tsne}
 \end{figure*}
 
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig7_confusion.pdf}
-\caption{Confusion matrices on held-out people (row-normalised), $k{=}25$, seed 0; CLIP uses no labels.}
-\label{fig:confusion}
-\end{figure*}
-
 % ------------------------------------------------------------------
-\FloatBarrier
 \section{Study 2: where does gaze live inside foundation models?}
 \label{sec:study2}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s2_layers.pdf}
+\caption{Layer-wise decoding on held-out people. Solid lines: eye-patch tokens; dashed lines: summary token (CLS, or
+mean patch for SigLIP). Dotted line: the nine geometry features. $R^2$ is clipped at $-0.2$ for display.}
+\label{fig:s2layers}
+\end{figure*}
+
+\begin{table*}[t]
+\centering
+\caption{Study 2 summary. Held-out-subject $R^2$ of a ridge decoder (pooled over five subject-disjoint folds) and
+eye-contact AUROC of the gaze readout. ``max (layer)'' is the best of 13 layers and is therefore selected on test
+data (see P3). The last column uses person-grouped $\alpha$ selection (S2-b). The summary-token maxima of $0.00$ come
+from heavily regularised constant predictors.}
+\label{tab:s2}
+\resizebox{\textwidth}{!}{\input{generated/table_study2.tex}}
+\end{table*}
+
 \paragraph{Design (pre-registered).}
 We froze DINOv2-S/14, DINOv2-B/14~\cite{oquab2024dinov2}, CLIP ViT-B/16~\cite{radford2021clip},
 SigLIP-B/16~\cite{zhai2023siglip} and MAE ViT-B/16~\cite{he2022mae} (MAE with no masking and identity patch order),
@@ -322,6 +305,14 @@ down from about $0.9$ in mid layers; Fig.~\ref{fig:s2layers}, right). Read out a
 between $0.48$ and $0.64$ AUROC at every layer. The final DINOv2-S CLS token gave a linear-probe AUROC of $0.514$, matching
 Study~1's $0.513$ at ALL.
 
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s2_heat.pdf}
+\caption{Horizontal-gaze $R^2$ for every model and layer. Left: summary token (never above $0.00$). Right: eye-patch
+tokens. Colour is clipped to $[0, 1]$.}
+\label{fig:s2heat}
+\end{figure*}
+
 \paragraph{Eye-patch tokens carry gaze, mostly in the middle layers.}
 Averaging the patch tokens over the two eyes changes the picture (Table~\ref{tab:s2}, Fig.~\ref{fig:s2layers}).
 At the patch-embedding layer, eye tokens decode nothing ($R^2(H)$ between $-0.07$ and $-0.02$). By the middle of
@@ -333,6 +324,15 @@ $R^2(H)$ falls from $0.58$ (layer 6) to $0.33$, SigLIP's from $0.48$ (layer 3) t
 to $0.47$ at the last layer. This is consistent with the view that the training objective decides whether fine,
 task-irrelevant geometry survives to the output~\cite{elbanani2024probing}. Head pose is decodable from the eye tokens
 at every layer ($R^2(P)\ge0.91$ after layer 0), so the two quantities are entangled in the same tokens.
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s2_readout.pdf}
+\caption{Eye-contact AUROC on held-out people by layer, mean over five folds. Left: linear logistic probe on binary
+labels. Right: gaze readout from the ridge decoder (trained with continuous gaze labels). Dotted lines show the geometry
+features under the same probe: $0.555$ (left) and $0.813$ (right).}
+\label{fig:s2readout}
+\end{figure*}
 
 \paragraph{Sensitivity to the choice of $\alpha$ (S2-b).}
 The pre-registration claimed that choosing $\alpha$ by leave-one-image-out could only inflate $R^2$. This was wrong:
@@ -353,43 +353,7 @@ we therefore chose the layer and $\alpha$ inside each training fold by person-gr
 Gaze is linearly present in mid-level patch tokens of every model we probed. A generic classifier on the summary token,
 the common way of using these models, cannot reach it.
 
-\begin{table*}[t]
-\centering
-\caption{Study 2 summary. Held-out-subject $R^2$ of a ridge decoder (pooled over five subject-disjoint folds) and
-eye-contact AUROC of the gaze readout. ``max (layer)'' is the best of 13 layers and is therefore selected on test
-data (see P3). The last column uses person-grouped $\alpha$ selection (S2-b). The summary-token maxima of $0.00$ come
-from heavily regularised constant predictors.}
-\label{tab:s2}
-\resizebox{\textwidth}{!}{\input{generated/table_study2.tex}}
-\end{table*}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_s2_layers.pdf}
-\caption{Layer-wise decoding on held-out people. Solid lines: eye-patch tokens; dashed lines: summary token (CLS, or
-mean patch for SigLIP). Dotted line: the nine geometry features. $R^2$ is clipped at $-0.2$ for display.}
-\label{fig:s2layers}
-\end{figure*}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_s2_heat.pdf}
-\caption{Horizontal-gaze $R^2$ for every model and layer. Left: summary token (never above $0.00$). Right: eye-patch
-tokens. Colour is clipped to $[0, 1]$.}
-\label{fig:s2heat}
-\end{figure*}
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig_s2_readout.pdf}
-\caption{Eye-contact AUROC on held-out people by layer, mean over five folds. Left: linear logistic probe on binary
-labels. Right: gaze readout from the ridge decoder (trained with continuous gaze labels). Dotted lines show the geometry
-features under the same probe: $0.555$ (left) and $0.813$ (right).}
-\label{fig:s2readout}
-\end{figure*}
-
 % ------------------------------------------------------------------
-\FloatBarrier
 \section{An in-browser demonstrator}
 We exported the geometry classifier trained on all 5{,}878 images and re-implemented the feature code in JavaScript on
 MediaPipe tasks-vision 0.10.21 (the same face-landmark model file as the Python pipeline). On 24 images resized
@@ -398,13 +362,6 @@ features and $4.3\times10^{-4}$ in probability, with no decision flips; the test
 transformation matrices are column-major, a detail whose mistreatment flipped 13 of 24 decisions. The demonstrator
 runs on camera frames or photos entirely on the client, flags inputs outside the training ranges, and states that it
 is a research artefact, not a detector.
-
-\begin{figure*}[t]
-\centering
-\includegraphics[width=\textwidth]{fig8_efficiency.pdf}
-\caption{Feature-extraction and training cost on one laptop (RTX 3050 laptop GPU).}
-\label{fig:eff}
-\end{figure*}
 
 % ------------------------------------------------------------------
 \section{Discussion}
@@ -443,4 +400,52 @@ both studies were committed before they ran; images are not redistributed.
 \bibliographystyle{abbrvnat}
 \bibliography{references}
 }
+\clearpage
+\onecolumn
+\appendix
+\section{Supplementary figures}
+These figures support Section~\ref{sec:study1} and the demonstrator section. All of them come from the same verified runs as the main text.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.9\textwidth]{figS1_ablations_auroc.pdf}
+\caption{Ablations: representation choices within each family.}
+\label{fig:ablations}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1.0\textwidth]{figS2_prediction_rate_by_gaze.pdf}
+\caption{Share of images predicted camera-directed per gaze cell at $k{=}25$ (centre = true positives).}
+\label{fig:heat}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.9\textwidth]{fig5_label_noise.pdf}
+\caption{Simulated label noise: class-balanced flips of training labels only, identical across methods.}
+\label{fig:noise}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.5\textwidth]{fig_per_subject.pdf}
+\caption{Per-person AUROC: L2CS-Net without labels versus geometry at $k{=}25$.}
+\label{fig:subject}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=1.0\textwidth]{fig7_confusion.pdf}
+\caption{Confusion matrices on held-out people (row-normalised), $k{=}25$, seed 0; CLIP uses no labels.}
+\label{fig:confusion}
+\end{figure}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.95\textwidth]{fig8_efficiency.pdf}
+\caption{Feature-extraction and training cost on one laptop (RTX 3050 laptop GPU).}
+\label{fig:eff}
+\end{figure}
+
 \end{document}
