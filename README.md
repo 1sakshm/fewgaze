@@ -213,6 +213,28 @@ docs/           methodology.md (pre-registered plan + deviations), dataset_card.
 * CIs capture subject-sampling uncertainty with models held fixed. The SD across runs is reported separately.
 * No demographic labels are available, so no fairness analysis was done. Not for surveillance or attention monitoring.
 
+## AI use
+
+This project was built with heavy AI assistance. This section says who did what.
+
+* **Origin of the idea.** I drafted the research question and the initial project plan with help from an AI chat
+  assistant. The project is best read as a replication and extension of Smith et al. (2013) built around that question.
+* **Implementation, analysis and writing.** Nearly all code was written by Claude (Anthropic), working as a coding
+  agent in Claude Code under my direction. That covers the pipeline, the tests, the experiment and analysis scripts,
+  the figures, the website and demo, and the first drafts of the paper and of this README. Claude also ran the
+  experiments and proposed many method details, including the degree-2 polynomial head, the subject-cluster
+  bootstrap, the Study 2 design and the S2-b and P3 corrections. It also caught and recorded an error in its own
+  Study 2 pre-registration. The qualitative error review in `results/tables/error_review_manual.csv` is Claude's
+  visual inspection, not a human annotation.
+* **My part.** I chose the topic and the dataset and obtained access to it. I set the goals and the scope at each
+  step: the label-budget protocol, the extended paper with a new study, the generative-VLM experiment, the website and
+  camera demo, the works to cite and the public release. I reviewed the code, figures and numbers, and edited the
+  paper text. I am responsible for every claim in the repository.
+* **Timeline.** The commit timestamps are real. The project was built over about two days of AI-assisted sessions,
+  from 22 to 24 October 2026.
+* **History edit.** Before the first push I rewrote the commit messages once, to remove automatic AI co-author lines.
+  File contents were not changed ([`docs/commit_map.md`](docs/commit_map.md)). This section replaces that attribution.
+
 ## References
 
 Key sources: Smith et al. 2013 (Columbia Gaze, gaze locking); Müller et al. 2018; Zhang et al. 2017; Oquab et al. 2024
