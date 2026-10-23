@@ -243,3 +243,36 @@ the training people. The criterion is inner squared error of H/σ_H plus V/σ_V.
 held-out people. Geometry goes through the same procedure. Outputs: `results/study2/nested_layer.csv` and
 `nested_layer_summary.csv` (fold-mean AUROC, fold SD, and the per-fold paired difference against geometry). Script:
 `scripts/study2_nested_layer.py`. This analysis is post hoc and labelled as such.
+
+## Study 3 (pre-registered 2026-10-24, before any VLM output was seen): a generative vision-language model
+
+**Question.** Can a small open generative VLM, asked in plain language, recognise camera-directed gaze zero-shot, and
+does a handful of in-context examples help?
+
+**Model.** `Qwen/Qwen2.5-VL-3B-Instruct`. It is loaded in 4-bit NF4 with bitsandbytes (fp16 compute) to fit a 4 GB
+laptop GPU, in a separate environment (`fewgaze-vlm`: transformers 4.51.3, bitsandbytes 0.45.5) so the Study 1/2
+environment is untouched. Quantisation can lower accuracy; this is stated as a limitation.
+
+**Input.** The same cached 448×448 MediaPipe face crops used by every Study 1 appearance method, at 256 visual tokens.
+
+**Prompt (fixed).** System prompt: none beyond the model default. User turn: the image, then
+"Is this person looking directly at the camera? Answer with Yes or No." **Score:** the logit of the first answer token
+"Yes" minus that of "No", read at the first generated position (no sampling). The score is used for AUROC; a
+score > 0 is the prediction used for balanced accuracy.
+
+**Conditions.**
+1. *Zero-shot (S3-a):* every one of the 5,878 images, scored once. It is evaluated exactly like CLIP zero-shot: per
+   fold on that fold's test people, fold-mean AUROC, and the fold-stratified subject bootstrap (1,000 replicates).
+   Paired differences are computed against CLIP zero-shot and L2CS-Net zero-shot.
+2. *Few-shot in context (S3-b):* k = 2 examples per class. They are taken from that fold's **training** people with
+   the protocol's own sampler (`sample_budget(train, 2, seed=0, fold)`, a prefix of the k = 5, seed 0 sample used in
+   Study 1). They are presented as earlier conversation turns (image → "Yes"/"No") in the fixed order
+   positive, negative, positive, negative. For compute, S3-b is scored on a fixed subset of each test fold: every
+   positive plus 4 negatives per positive, drawn uniformly with `numpy.random.default_rng([20261108, fold])`. AUROC
+   does not depend on class prevalence, so the subset is unbiased for it. Zero-shot scores on the same subset give a
+   paired comparison (few-shot minus zero-shot). Geometry at k = 5, seed 0 on the same subset is reported
+   descriptively. It uses more labels, so it is not a matched comparison.
+
+**Decisions fixed now.** One prompt, one example order, one seed. No prompt tuning on test data. If the model fails to
+load or run within the 4 GB budget, that is reported, and the paper's limitation section says no generative VLM was
+evaluated. Outputs: `results/study3/`. Script: `scripts/study3_vlm.py`.
