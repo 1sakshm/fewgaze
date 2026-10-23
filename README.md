@@ -26,7 +26,7 @@ interpersonal eye contact**.
 
 ## Key findings
 
-Verified results from run `20261023-005930-20d2e4` (clean commit `3fbfc55`; it reproduces the earlier run `20261023-000805-20d2e4` bit-for-bit). Values are mean AUROC over 5 subject folds × 5 seeds,
+Verified results from run `20261023-005930-20d2e4` (clean commit `5f6e0ba`, recorded as `3fbfc55` before a message-only history rewrite, see [`docs/commit_map.md`](docs/commit_map.md); it reproduces the earlier run `20261023-000805-20d2e4` bit-for-bit). Values are mean AUROC over 5 subject folds × 5 seeds,
 with 95 % subject-bootstrap CIs. Sources: `results/tables/learning_curves.csv` and `paired_differences.csv`.
 
 1. **Simple geometry was the most label-efficient method at every budget.** Nine MediaPipe eye and head
@@ -156,7 +156,6 @@ python scripts/study2_grouped_alpha.py --config configs/experiment.yaml   # sens
 python scripts/study2_nested_layer.py  --config configs/experiment.yaml   # post-hoc P3 (layer chosen on training people)
 python scripts/paper_figures.py                                           # paper figures + Study 2 table
 python scripts/export_site_data.py                                        # site/data/extras.json
-python scripts/build_artifact.py --out <dir>                              # optional: package site/ as a single hosted page
 python scripts/build_pages.py --out <dir>                                 # static build for https://fewgaze.pages.dev (no dataset images)
 npx wrangler pages deploy <dir> --project-name fewgaze --branch main
 ```

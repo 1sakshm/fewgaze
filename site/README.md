@@ -25,8 +25,8 @@ The camera needs a secure context: `localhost` and any HTTPS host qualify.
 * **GitHub Pages:** Settings → Pages → deploy from branch `main`, folder `/site` (or the repo root, then visit
   `/site/`). Pages serves `.wasm` and `.task` correctly. Set `repoUrl` and `paperUrl` in `config.js`. If you deploy
   only `/site`, also copy `report/main.pdf` into `site/` and point `paperUrl` at `main.pdf`.
-* **claude.ai Artifact:** run `python scripts/build_artifact.py --out <dir>` and publish `<dir>/index.html` with the
-  listed files. The artifact viewer has no camera access for this account, so visitors there use photo upload.
+* **Cloudflare Pages** (the live site, https://fewgaze.pages.dev): `python scripts/build_pages.py --out <dir>`, then
+  `npx wrangler pages deploy <dir> --project-name fewgaze --branch main`. The build excludes the local parity images.
 
 No analytics, cookies or backend. The theme choice is the only thing stored (`localStorage`).
 **No dataset images appear anywhere on the site.**
