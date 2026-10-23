@@ -2,7 +2,7 @@
 
 Differences from the GitHub Pages build, all forced by the artifact host:
 * the page is written without <!doctype>/<html>/<head>/<body> (the host adds its own skeleton);
-* config.js is inlined with no repository/paper URL (those links stay hidden);
+* config.js is inlined with no repository URL; the compiled paper ships as paper.pdf next to the page;
 * face_landmarker.task is shipped as base64 text (the host does not serve .task files; demo.js decodes it).
 
 Usage: python scripts/build_artifact.py --out <dir>   (prints the file list for the publish call)
@@ -57,7 +57,7 @@ def main() -> int:
         s, n = re.subn(pat, "", s, count=1, flags=re.I)
         if n != 1:
             raise SystemExit(f"skeleton tag not found once: {pat}")
-    s = s.replace('<script src="config.js"></script>', '<script>window.FEWGAZE_CONFIG = { repoUrl: "", paperUrl: "" };</script>')
+    s = s.replace('<script src="config.js"></script>', '<script>window.FEWGAZE_CONFIG = { repoUrl: "", paperUrl: "paper.pdf" };</script>')
     if not s.startswith("<title>") or re.search(r"<(html|head|body)\b", s, re.I):
         raise SystemExit("unexpected page structure after stripping")
     (out / "index.html").write_text(s, encoding="utf-8")
@@ -71,6 +71,10 @@ def main() -> int:
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
         files[rel] = str(dst)
+    pdf = SITE.parent / "report" / "main.pdf"
+    if pdf.exists():
+        shutil.copy2(pdf, out / "paper.pdf")
+        files["paper.pdf"] = str(out / "paper.pdf")
     task = SITE / "demo/vendor/face_landmarker.task"
     b64 = out / "demo/vendor/face_landmarker.task.b64.txt"
     b64.write_text(base64.b64encode(task.read_bytes()).decode("ascii"), encoding="ascii")
