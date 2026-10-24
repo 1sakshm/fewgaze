@@ -143,7 +143,9 @@ def analyse(cfg, data, folds, out: Path) -> dict:
         bl = []
         for ids in ids_per_fold:
             ids = [i for i in ids if all(i in s.index for s in series.values())]
-            bl.append(FoldBlock(subj.loc[ids].to_numpy(), lab.loc[ids].to_numpy(), {k: s.loc[ids].to_numpy()[None] for k, s in series.items()}))
+            bl.append(
+                FoldBlock(subj.loc[ids].to_numpy(), lab.loc[ids].to_numpy(), {k: s.loc[ids].to_numpy()[None] for k, s in series.items()})
+            )
         return bl
 
     def summarise(blocks, names, tag):
@@ -164,8 +166,11 @@ def analyse(cfg, data, folds, out: Path) -> dict:
 
     ref_s = {k: v.drop_duplicates("sample_id").set_index("sample_id")["score"] for k, v in ref.items()}
     fold_ids = [list(f.test_ids) for f in folds]
-    summarise(blocks_for(fold_ids, {"vlm_zeroshot": zs, "clip_zeroshot": ref_s["clip_zeroshot"], "l2cs_zeroshot": ref_s["l2cs_zeroshot"]}),
-              ["vlm_zeroshot", "clip_zeroshot", "l2cs_zeroshot"], "zeroshot_all")
+    summarise(
+        blocks_for(fold_ids, {"vlm_zeroshot": zs, "clip_zeroshot": ref_s["clip_zeroshot"], "l2cs_zeroshot": ref_s["l2cs_zeroshot"]}),
+        ["vlm_zeroshot", "clip_zeroshot", "l2cs_zeroshot"],
+        "zeroshot_all",
+    )
     ba = [balanced_accuracy(lab.loc[ids].to_numpy(), zs.loc[ids].to_numpy() > 0) for ids in fold_ids]
     res["zeroshot_all"]["vlm_zeroshot"]["balanced_accuracy"] = float(np.mean(ba))
     res["zeroshot_all"]["vlm_zeroshot"]["says_yes_rate"] = float((zs > 0).mean())
@@ -174,8 +179,11 @@ def analyse(cfg, data, folds, out: Path) -> dict:
         fs = pd.read_csv(fs_path).drop_duplicates("sample_id").set_index("sample_id")["score"]
         plan = pd.read_csv(out / "fewshot_plan.csv")
         sub_ids = [plan.loc[plan.fold == f.index, "sample_id"].tolist() for f in folds]
-        summarise(blocks_for(sub_ids, {"vlm_fewshot_k2": fs, "vlm_zeroshot": zs, "geometry_k5_seed0": ref_s["geometry_k5_seed0"]}),
-                  ["vlm_fewshot_k2", "vlm_zeroshot", "geometry_k5_seed0"], "subset")
+        summarise(
+            blocks_for(sub_ids, {"vlm_fewshot_k2": fs, "vlm_zeroshot": zs, "geometry_k5_seed0": ref_s["geometry_k5_seed0"]}),
+            ["vlm_fewshot_k2", "vlm_zeroshot", "geometry_k5_seed0"],
+            "subset",
+        )
         res["subset"]["n_images"] = int(sum(len(i) for i in sub_ids))
         res["subset"]["vlm_fewshot_k2"]["says_yes_rate"] = float((fs > 0).mean())
     (out / "summary.json").write_text(json.dumps(res, indent=1))
@@ -205,7 +213,9 @@ def main() -> int:
             z = vlm.score(load_image(cdir, r.sample_id))
             t1 = time.perf_counter()
             f = vlm.score(load_image(cdir, r.sample_id), [(load_image(cdir, s), "Yes" if lab[s] else "No") for s in r.shots.split()])
-            log.info("%s label=%d zs=%.2f (%.2f s) fs=%.2f (%.2f s)", r.sample_id, lab[r.sample_id], z, t1 - t0, f, time.perf_counter() - t1)
+            log.info(
+                "%s label=%d zs=%.2f (%.2f s) fs=%.2f (%.2f s)", r.sample_id, lab[r.sample_id], z, t1 - t0, f, time.perf_counter() - t1
+            )
         return 0
     if args.stage == "analyse":
         print(json.dumps(analyse(cfg, data, folds, out), indent=1))

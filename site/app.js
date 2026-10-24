@@ -516,6 +516,17 @@ function study2(extras) {
   document.getElementById("s2facts").innerHTML = items.map(([b, s]) => `<article class="fact"><b>${b}</b><span>${s}</span></article>`).join("");
 }
 
+function study3(s3) {
+  const z = s3.zeroshot, sub = s3.subset;
+  const items = [
+    [z.vlm_zeroshot.auroc.toFixed(3), `AUROC asking the VLM, zero-shot: the best label-free method (CLIP prompts ${z.clip_zeroshot.auroc.toFixed(3)}, L2CS-Net ${z.l2cs_zeroshot.auroc.toFixed(3)})`],
+    [`${Math.round(z.vlm_zeroshot.says_yes_rate * 100)}%`, "of all images got a \"Yes\", though only 4.8% are looking at the camera. Its answers follow head pose more than gaze"],
+  ];
+  if (sub) items.push([sub.vlm_fewshot_k2.auroc.toFixed(3), `with two labelled examples per class in the prompt, down from ${sub.vlm_zeroshot.auroc.toFixed(3)} on the same images: the examples hurt`]);
+  document.getElementById("s3facts").innerHTML = items.map(([b, t]) => `<article class="fact"><b>${b}</b><span>${t}</span></article>`).join("");
+  document.getElementById("s3").hidden = false;
+}
+
 /* ---------------- data ---------------- */
 function fill(data) {
   const get = (m, b, metric = "auroc") => data.curves.find((r) => r.method === m && r.budget === b && r.metric === metric && r.condition === "clean");
@@ -565,6 +576,7 @@ async function load() {
   }));
   lineChart(document.getElementById("noise"), noise, data, [0, 0.1, 0.2, 0.3], (x) => `${Math.round(x * 100)}%`);
   if (extras) study2(extras);
+  if (extras && extras.study3) study3(extras.study3);
   themeListeners.push(() => { learningCurve(lc, data, metric); requestAnimationFrame(() => lc.classList.add("in")); heatmap(data); });
   let to;
   addEventListener("resize", () => { clearTimeout(to); to = setTimeout(() => { learningCurve(lc, data, metric); lc.classList.add("in"); }, 200); });

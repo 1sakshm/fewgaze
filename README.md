@@ -66,6 +66,21 @@ using the same five folds. Sources: `results/study2/`.
 
 ![Study 2 layers](results/figures/fig_s2_layers.png)
 
+### Study 3 (pre-registered): asking a generative VLM
+
+Qwen2.5-VL-3B-Instruct (4-bit) was asked "Is this person looking directly at the camera? Answer with Yes or No." on the
+same face crops and folds. The score is logit(Yes) − logit(No). Source: `results/study3/summary.json`.
+
+10. **Zero-shot, it is the best label-free method, but only just.** AUROC was 0.601 [0.568, 0.633], against CLIP's
+    0.547 (paired +0.054 [0.023, 0.080]) and L2CS-Net's 0.595 (+0.006 [−0.033, 0.040]). As a yes/no detector it is
+    poor: it said "Yes" to 27 % of images, while only 4.8 % are positive.
+11. **Its answers follow head pose more than gaze.** It said "Yes" to 71 % of frontal camera-directed images but to
+    16–18 % of those at ±30°. It said "Yes" to 40 % of camera-directed images and to 38 % of those 5° off.
+12. **In-context examples hurt.** Two labelled examples per class lowered AUROC on the same 1,400 images from 0.603
+    to 0.547 (paired −0.056 [−0.081, −0.026]). That is level with geometry trained on five labels per class.
+
+![Study 3](results/figures/fig_s3_vlm.png)
+
 ## Live demo
 
 Live at **https://fewgaze.pages.dev**: camera and photo upload, with the paper at `/paper.pdf`.
@@ -154,6 +169,8 @@ python scripts/study2_extract.py       --config configs/experiment.yaml   # cach
 python scripts/study2_probe.py         --config configs/experiment.yaml   # results/study2/decoding.csv, readout.csv
 python scripts/study2_grouped_alpha.py --config configs/experiment.yaml   # sensitivity S2-b
 python scripts/study2_nested_layer.py  --config configs/experiment.yaml   # post-hoc P3 (layer chosen on training people)
+# Study 3 (generative VLM; separate env "fewgaze-vlm" with transformers 4.51.3 + bitsandbytes 0.45.5; ~4 h on a 4 GB GPU)
+python scripts/study3_vlm.py --config configs/experiment.yaml --stage zeroshot   # then --stage fewshot, --stage analyse
 python scripts/paper_figures.py                                           # paper figures + Study 2 table
 python scripts/export_site_data.py                                        # site/data/extras.json
 python scripts/build_pages.py --out <dir>                                 # static build for https://fewgaze.pages.dev (no dataset images)
@@ -185,6 +202,7 @@ schema is in [`results/README.md`](results/README.md).
 | P1–P2 Post-hoc diagnostics | `results/posthoc/figures/` | `posthoc_analyses.py` |
 | Paper figures (teaser, iris shift, t-SNE, L2CS bias, forest, per-subject) | `results/figures/fig_*` | `paper_figures.py` |
 | Study 2 layer curves, heatmap, readout | `fig_s2_layers`, `fig_s2_heat`, `fig_s2_readout` | `paper_figures.py --only study2` |
+| Study 3 VLM: label-free AUROC, answers by gaze and head pose | `fig_s3_vlm` | `paper_figures.py --only study3` |
 
 Result categories: everything under `results/tables` and `results/figures` is a **verified experimental result**
 from the run named in `results/runs/LATEST`. Everything under `results/posthoc/` is **post-hoc exploratory**.

@@ -491,6 +491,73 @@ def study2_table(cfg):
     return summary
 
 
+def study3_fig(cfg):
+    """Generative VLM (Study 3): zero-label AUROC with CIs, and where its 'Yes' answers go."""
+    d3 = output_dir(cfg) / "study3"
+    summ = json.loads((d3 / "summary.json").read_text())
+    man = load_manifest(cfg)
+    data = labelled_view(man.records, derive_labels(man.records, cfg["labels"]))
+    zs = pd.read_csv(d3 / "scores_zeroshot.csv").drop_duplicates("sample_id").merge(data, on="sample_id")
+    fs = pd.read_csv(d3 / "scores_fewshot.csv").drop_duplicates("sample_id").merge(data, on="sample_id")
+
+    def cell(df):
+        return np.select(
+            [df.label == 1, (df.gaze_v == 0) & (df.gaze_h.abs() == 5), df.gaze_v == 0],
+            ["camera\n(H=V=0)", "|H| = 5°", "|H| ≥ 10°"],
+            "V = ±10°",
+        )
+
+    zs["cell"], fs["cell"] = cell(zs), cell(fs)
+    zsub = zs[zs.sample_id.isin(fs.sample_id)]
+    fig, ax = plt.subplots(1, 3, figsize=(11.5, 3.4), gridspec_kw={"width_ratios": [1.1, 1.2, 1.2]})
+    za = summ["zeroshot_all"]
+    rows = [
+        ("CLIP ViT-B/32, 2 prompts", za["clip_zeroshot"], FAMILY_COLOR.get("clip", INK2)),
+        ("L2CS-Net angle to camera", za["l2cs_zeroshot"], FAMILY_COLOR.get("l2cs", INK2)),
+        ("Qwen2.5-VL-3B, asked", za["vlm_zeroshot"], SIGNAL),
+    ]
+    for i, (_name, r, c) in enumerate(rows):
+        lo, hi = r["ci95"]
+        ax[0].plot([lo, hi], [i, i], color=c, lw=2.2, solid_capstyle="round")
+        ax[0].plot(r["auroc"], i, "o", color=c, ms=8, mec="white", mew=1.5)
+        ax[0].text(hi + 0.006, i, f"{r['auroc']:.3f}", va="center", fontsize=8, color=INK)
+    ax[0].set_yticks(range(len(rows)), [r[0] for r in rows], fontsize=8)
+    ax[0].axvline(0.5, color=INK2, lw=0.8, ls=":")
+    ax[0].set_xlim(0.49, 0.68)
+    ax[0].set_xlabel("AUROC on held-out people (95% subject CI)")
+    ax[0].set_title("no FewGaze labels", fontsize=10)
+    order = ["camera\n(H=V=0)", "|H| = 5°", "|H| ≥ 10°", "V = ±10°"]
+    x = np.arange(len(order))
+    a = zsub.groupby("cell").score.apply(lambda v: (v > 0).mean()).reindex(order)
+    b = fs.groupby("cell").score.apply(lambda v: (v > 0).mean()).reindex(order)
+    ax[1].bar(x - 0.2, a, 0.38, color=SIGNAL, label="zero-shot")
+    ax[1].bar(x + 0.2, b, 0.38, color=COBALT, label="2 examples per class in context")
+    for xi, v in zip(x, a):
+        ax[1].text(xi - 0.2, v + 0.01, f"{v:.0%}", ha="center", fontsize=7.5, color=INK)
+    for xi, v in zip(x, b):
+        ax[1].text(xi + 0.2, v + 0.01, f"{v:.0%}", ha="center", fontsize=7.5, color=INK)
+    ax[1].set_xticks(x, order, fontsize=8)
+    ax[1].set_ylabel("share answered 'Yes'")
+    ax[1].set_ylim(0, 0.5)
+    ax[1].set_title("answers by true gaze (same 1,400 images)", fontsize=10)
+    ax[1].legend(fontsize=7.5, frameon=False, loc="upper right")
+    poses = sorted(zs.head_pose.unique())
+    for lab, c, name in [(1, SIGNAL, "looking at camera"), (0, INK2, "looking elsewhere")]:
+        r = zs[zs.label == lab].groupby("head_pose").score.apply(lambda v: (v > 0).mean()).reindex(poses)
+        ax[2].plot(poses, r.values, "o-", color=c, lw=2, ms=6, mec="white", mew=1.2, label=name)
+    ax[2].set_xticks(poses, [f"{int(p):+d}°" if p else "0°" for p in poses])
+    ax[2].set_xlabel("head pose (yaw)")
+    ax[2].set_ylabel("share answered 'Yes' (zero-shot)")
+    ax[2].set_ylim(0, 0.75)
+    ax[2].set_title("head pose moves the answer more than gaze", fontsize=10)
+    ax[2].legend(fontsize=7.5, frameon=False)
+    for a_ in ax:
+        a_.grid(axis="x" if a_ is ax[0] else "y", color=GRID, lw=0.6)
+    fig.tight_layout()
+    save_both(fig, cfg, "fig_s3_vlm")
+    plt.close(fig)
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--config", default=str(REPO_ROOT / "configs" / "experiment.yaml"))
@@ -517,6 +584,8 @@ def main() -> int:
     if run("study2"):
         study2_figs(cfg)
         study2_table(cfg)
+    if run("study3") and (output_dir(cfg) / "study3" / "summary.json").exists():
+        study3_fig(cfg)
     if stats:
         p = output_dir(cfg) / "tables" / "paper_figure_stats.json"
         prev = json.loads(p.read_text()) if p.exists() else {}

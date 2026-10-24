@@ -39,3 +39,4 @@ results/runs/*/predictions.csv.gz
 results/runs/*/selections.json.gz
 site/demo/parity/
 results/study2_*log*.txt
+results/study3_*log*.txt

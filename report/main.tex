@@ -45,6 +45,7 @@ $0.025$ eye-widths, against a between-person spread of $0.017$, which explains w
 condition from its nearest neighbours.
 \emph{Study~2} (pre-registered) probes every layer of five frozen foundation models (DINOv2-S/B, CLIP, SigLIP, MAE)
 from the summary token and from eye-region patch tokens. The summary token encodes head pose (final-layer $R^2$ up to $0.97$) but never horizontal gaze ($R^2{\le}0.00$ at every layer of every model). Mean eye-patch tokens in the middle layers do decode gaze (best-layer $R^2(V)$ $0.45$--$0.68$), and much of it is lost by the last layer. When the layer is chosen on training people only, reading eye contact out of CLIP's decoded gaze matches the geometry features (AUROC $0.827$ vs.~$0.816$, paired difference $+0.011$, fold SD $0.019$). This readout uses continuous gaze labels.
+\emph{Study~3} asks a generative VLM (Qwen2.5-VL-3B) the question directly. Zero-shot it is the best label-free method (AUROC $0.601$, CLIP $0.547$), but its answers follow head pose more than gaze, and two in-context examples per class lower it to $0.547$.
 A browser demo reproduces the Python pipeline to within $4\times10^{-4}$ in probability.
 \end{abstract}
 
@@ -73,6 +74,7 @@ variation, identity-dominated foundation-model embeddings, and a head-pose-depen
 estimator;
 \item a pre-registered, layer- and token-resolved probe of five frozen foundation models for gaze under
 held-out-subject evaluation, linked to eye-contact classification (Study~2);
+\item a pre-registered test of a generative vision-language model, asked zero-shot and with in-context examples (Study 3);
 \item an open, parity-tested in-browser demonstrator.
 \end{enumerate}
 
@@ -354,6 +356,50 @@ Gaze is linearly present in mid-level patch tokens of every model we probed. A g
 the common way of using these models, cannot reach it.
 
 % ------------------------------------------------------------------
+\section{Study 3: asking a generative vision-language model}
+\label{sec:study3}
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{fig_s3_vlm.pdf}
+\caption{Study~3. Left: label-free methods on held-out people (fold-mean AUROC, 95\% subject-bootstrap interval).
+Centre: share of ``Yes'' answers by true gaze, zero-shot and with two examples per class in context, on the same
+1{,}400 images. Right: zero-shot ``Yes'' rate by head pose, for images looking at the camera and all others.}
+\label{fig:s3}
+\end{figure*}
+
+\paragraph{Design (pre-registered).}
+CLIP scores images against fixed captions; a generative VLM can instead be asked the question in plain language. We
+asked Qwen2.5-VL-3B-Instruct, the smallest current open model that fits a 4\,GB laptop GPU (loaded in 4-bit), ``Is
+this person looking directly at the camera? Answer with Yes or No.'' The input was the same face crop as every
+Study~1 method. The score was the logit of ``Yes'' minus that of ``No'' at the first answer token. Zero-shot (S3-a)
+covered all 5{,}878 images under the Study~1 folds and bootstrap. In the few-shot condition (S3-b), two labelled
+examples per class from the fold's training people were placed earlier in the conversation. These were the first two
+of Study~1's $k{=}5$ sample. S3-b used every positive and four negatives per positive in each test fold
+(1{,}400 images). Prompt, example order and subset were fixed before any output was seen.
+
+\paragraph{Zero-shot, the model is the best label-free method, but only just.}
+Asked directly, the VLM reached AUROC $0.601$ [$0.568$, $0.633$] (Fig.~\ref{fig:s3}, left). This is better than
+CLIP's two prompts ($0.547$; paired difference $+0.054$ [$0.023$, $0.080$]) and level with the L2CS-Net angle score
+($0.595$; $+0.006$ [$-0.033$, $0.040$]). It is also above geometry trained on five labels per class ($0.537$).
+Taken as a yes/no detector it is poor: it said ``Yes'' to 27\% of all images, where only 4.8\% are positive, for a
+balanced accuracy of $0.568$.
+
+\paragraph{What the model answers.}
+The ``Yes'' rate follows head pose more than gaze (Fig.~\ref{fig:s3}, right). For people looking at the camera, it
+fell from $71\%$ with a frontal head to $16$--$18\%$ at $\pm30^\circ$; for all other images, from $48\%$ to
+$11$--$15\%$. On the 1{,}400-image subset the model said ``Yes'' to $40\%$ of camera-directed images and to $38\%$ of
+those $5^\circ$ off (centre). Like every other method here, it cannot resolve the hardest distinction. The model
+appears to answer partly ``is the face turned towards me?'', which is the same head-pose shortcut that limits
+L2CS-Net.
+
+\paragraph{In-context examples hurt.}
+Two labelled examples per class lowered AUROC on the same images from $0.603$ to $0.547$ (paired difference
+$-0.056$ [$-0.081$, $-0.026$]). This is level with geometry trained on five labels per class ($0.540$ on this subset).
+The examples made the model say ``Yes'' less often (19\%), but not more selectively: $21\%$ for camera-directed images
+against $23\%$ at $5^\circ$. Small VLMs are known to use in-context images weakly. Four examples of one fine-grained
+distinction do not seem to teach it; they mostly shift the model's bias. Larger models, other prompts and more
+examples could behave differently. We tested one of each, by design.
+
 \section{An in-browser demonstrator}
 We exported the geometry classifier trained on all 5{,}878 images and re-implemented the feature code in JavaScript on
 MediaPipe tasks-vision 0.10.21 (the same face-landmark model file as the Python pipeline). On 24 images resized
@@ -370,7 +416,7 @@ right inductive bias for a target that sits at the centre of gaze space. Generic
 label-efficient here because their dominant variation is identity and head pose, both irrelevant to the task. The gaze
 estimator shows the value and the limits of prior knowledge: it beats every method trained on ten labels or fewer
 without seeing a single FewGaze label, but its person- and pose-dependent bias caps what a pooled classifier can learn
-from its outputs. Study~2 locates the failure. Gaze is present in the mid-level eye-patch tokens of all five models, but the summary token drops it, and most models attenuate it in their final layers. The usual recipe, a linear probe on the last CLS token, therefore looks in the wrong place~\cite{elbanani2024probing}. No method resolved the dataset's hardest distinction,
+from its outputs. Study~2 locates the failure. Gaze is present in the mid-level eye-patch tokens of all five models, but the summary token drops it, and most models attenuate it in their final layers. The usual recipe, a linear probe on the last CLS token, therefore looks in the wrong place~\cite{elbanani2024probing}. Study~3 adds that asking a small generative VLM is a reasonable zero-label baseline, and that a handful of in-context images does not turn it into a few-shot learner for this distinction. No method resolved the dataset's hardest distinction,
 0\textdegree{} versus 5\textdegree, and absolute performance (AUROC $\le0.81$) is far from deployable; it is not
 comparable to the per-image accuracy reported by Smith et al., who evaluated a different detector under a different
 protocol~\cite{smith2013gazelocking}.
@@ -382,7 +428,7 @@ This study is a deliberately controlled first step. The natural next step is soc
 Results hold for one controlled dataset: 56 people, one lab, 2\,m, yaw-only head pose, a chin rest. Camera-directed
 gaze is a proxy, not interpersonal eye contact, and individual fixation accuracy is unknown. Intervals capture
 subject sampling with models held fixed. Heads were fixed in advance; other probes might rank the embeddings
-differently. The dataset has no demographic labels, so we make no fairness claims, and pretrained models carry the
+differently. Study~3 tested one small VLM (3B parameters, 4-bit), one prompt and one set of examples; larger or full-precision models may do better. The dataset has no demographic labels, so we make no fairness claims, and pretrained models carry the
 biases of their training data. The dataset licence forbids redistribution, so no participant image appears in this
 paper. Gaze sensing can be misused for surveillance or attention scoring; our models are research artefacts and are
 unsuitable for monitoring or high-stakes use.
@@ -390,7 +436,7 @@ unsuitable for monitoring or high-stakes use.
 \section{Conclusion}
 A handful of interpretable measurements with a quadratic boundary made the best use of labels, from 5 per class to
 several thousand; a frozen generic embedding with a linear probe did not learn the task, and a pretrained gaze
-estimator mainly helped when no labels were available. Inside foundation models, gaze is not absent but misplaced. Mid-layer eye-patch tokens carry it, and read out through decoded gaze, CLIP's tokens match nine hand-built measurements. The open question is whether
+estimator mainly helped when no labels were available. Inside foundation models, gaze is not absent but misplaced. Mid-layer eye-patch tokens carry it, and read out through decoded gaze, CLIP's tokens match nine hand-built measurements. Asked in words, a small generative VLM is the best label-free method, but it answers mostly about the head, and its examples do not help. The open question is whether
 person-specific calibration or eye-local representations can resolve the last 5\textdegree{} that separate looking
 \emph{at} the camera from looking just past it.
 
@@ -399,7 +445,7 @@ This work was produced with substantial AI assistance. The research question and
 
 \paragraph{Reproducibility.}
 Every number, table and figure is regenerated by the commands in the repository from the recorded runs; the plans for
-both studies were committed before they ran; images are not redistributed.
+all three studies were committed before they ran; images are not redistributed.
 
 \FloatBarrier
 {\small

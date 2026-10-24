@@ -79,6 +79,9 @@ def main() -> int:
         }
         if (s2 / "nested_layer_summary.csv").exists():
             extras["study2"]["nested"] = pd.read_csv(s2 / "nested_layer_summary.csv").round(4).to_dict(orient="records")
+    if (output_dir(cfg) / "study3" / "summary.json").exists():
+        s3 = read_json(output_dir(cfg) / "study3" / "summary.json")
+        extras["study3"] = {"zeroshot": s3["zeroshot_all"], "subset": s3.get("subset")}
     model = read_json(REPO_ROOT / "site" / "demo" / "model.json")
     extras["demo"] = model["cross_validated"]
     path = REPO_ROOT / "site" / "data" / "extras.json"
