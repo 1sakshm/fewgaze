@@ -237,12 +237,12 @@ This project was built with heavy AI assistance. This section says who did what.
 
 * **Origin of the idea.** I drafted the research question and the initial project plan with help from an AI chat
   assistant. The project is best read as a replication and extension of Smith et al. (2013) built around that question.
-* **Implementation, analysis and writing.** Nearly all code was written by Claude (Anthropic), working as a coding
-  agent in Claude Code under my direction. That covers the pipeline, the tests, the experiment and analysis scripts,
-  the figures, the website and demo, and the first drafts of the paper and of this README. Claude also ran the
+* **Implementation, analysis and writing.** Nearly all code was written by an AI coding agent working under my
+  direction. That covers the pipeline, the tests, the experiment and analysis scripts,
+  the figures, the website and demo, and the first drafts of the paper and of this README. The agent also ran the
   experiments and proposed many method details, including the degree-2 polynomial head, the subject-cluster
   bootstrap, the Study 2 design and the S2-b and P3 corrections. It also caught and recorded an error in its own
-  Study 2 pre-registration. The qualitative error review in `results/tables/error_review_manual.csv` is Claude's
+  Study 2 pre-registration. The qualitative error review in `results/tables/error_review_manual.csv` is the agent's
   visual inspection, not a human annotation.
 * **My part.** I chose the topic and the dataset and obtained access to it. I set the goals and the scope at each
   step: the label-budget protocol, the extended paper with a new study, the generative-VLM experiment, the website and
