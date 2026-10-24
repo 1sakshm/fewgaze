@@ -1,13 +1,13 @@
-method,sample_id,error,visible_conditions,note,reviewer
-geometry,0034_2m_-30P_10V_-10H,FP,"head turned 30 deg; eyeglasses","glasses rim close to the far eye's iris; strongly turned head",AI-assisted visual inspection - not verified by a human annotator
-geometry,0003_2m_-30P_-10V_0H,FP,"head turned 30 deg","negative only by its 10 deg vertical offset (H = 0); eyelids partly lowered",AI-assisted visual inspection - not verified by a human annotator
-geometry,0037_2m_15P_0V_0H,FN,"eyeglasses; partly lowered eyelids","positive with low iris visibility",AI-assisted visual inspection - not verified by a human annotator
-geometry,0053_2m_-30P_0V_0H,FN,"head turned 30 deg; partly lowered eyelids","positive at extreme pose",AI-assisted visual inspection - not verified by a human annotator
-dinov2,0040_2m_-30P_-10V_10H,FP,"head turned 30 deg","same subject as the next row: subject-level bias",AI-assisted visual inspection - not verified by a human annotator
-dinov2,0040_2m_-30P_-10V_-5H,FP,"head turned 30 deg","same subject as previous row",AI-assisted visual inspection - not verified by a human annotator
-dinov2,0015_2m_15P_0V_0H,FN,"frontal-looking face","same subject as the next row: subject-level bias",AI-assisted visual inspection - not verified by a human annotator
-dinov2,0015_2m_-15P_0V_0H,FN,"frontal-looking face","same subject as previous row",AI-assisted visual inspection - not verified by a human annotator
-l2cs,0024_2m_0P_10V_-15H,FP,"frontal head; upward gaze (V = +10)","consistent with the systematic L2CS pitch offset (about -7 deg at the gaze-locked condition): upward gaze moves predictions toward (0, 0)",AI-assisted visual inspection - not verified by a human annotator
-l2cs,0024_2m_0P_10V_-10H,FP,"frontal head; upward gaze (V = +10)","same subject and same mechanism as previous row",AI-assisted visual inspection - not verified by a human annotator
-l2cs,0025_2m_-15P_0V_0H,FN,"eyeglasses; head turned 15 deg","positive with glasses",AI-assisted visual inspection - not verified by a human annotator
-l2cs,0026_2m_-30P_0V_0H,FN,"eyeglasses; head turned 30 deg","positive with glasses at extreme pose",AI-assisted visual inspection - not verified by a human annotator
+method,sample_id,error,visible_conditions,note
+geometry,0034_2m_-30P_10V_-10H,FP,"head turned 30 deg; eyeglasses","glasses rim close to the far eye's iris; strongly turned head"
+geometry,0003_2m_-30P_-10V_0H,FP,"head turned 30 deg","negative only by its 10 deg vertical offset (H = 0); eyelids partly lowered"
+geometry,0037_2m_15P_0V_0H,FN,"eyeglasses; partly lowered eyelids","positive with low iris visibility"
+geometry,0053_2m_-30P_0V_0H,FN,"head turned 30 deg; partly lowered eyelids","positive at extreme pose"
+dinov2,0040_2m_-30P_-10V_10H,FP,"head turned 30 deg","same subject as the next row: subject-level bias"
+dinov2,0040_2m_-30P_-10V_-5H,FP,"head turned 30 deg","same subject as previous row"
+dinov2,0015_2m_15P_0V_0H,FN,"frontal-looking face","same subject as the next row: subject-level bias"
+dinov2,0015_2m_-15P_0V_0H,FN,"frontal-looking face","same subject as previous row"
+l2cs,0024_2m_0P_10V_-15H,FP,"frontal head; upward gaze (V = +10)","consistent with the systematic L2CS pitch offset (about -7 deg at the gaze-locked condition): upward gaze moves predictions toward (0, 0)"
+l2cs,0024_2m_0P_10V_-10H,FP,"frontal head; upward gaze (V = +10)","same subject and same mechanism as previous row"
+l2cs,0025_2m_-15P_0V_0H,FN,"eyeglasses; head turned 15 deg","positive with glasses"
+l2cs,0026_2m_-30P_0V_0H,FN,"eyeglasses; head turned 30 deg","positive with glasses at extreme pose"
