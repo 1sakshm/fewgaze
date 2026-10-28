@@ -231,6 +231,19 @@ docs/           methodology.md (pre-registered plan + deviations), dataset_card.
 * CIs capture subject-sampling uncertainty with models held fixed. The SD across runs is reported separately.
 * No demographic labels are available, so no fairness analysis was done. Not for surveillance or attention monitoring.
 
+## Towards multi-person interaction
+
+Columbia Gaze is one person looking at a camera. Social behaviour analysis, such as the group conversations of
+Müller et al. (2018), differs in three ways this study does not test:
+
+* **Several faces per frame.** Each person must be detected and tracked apart over time, and each label belongs to one
+  person and one target. Tracking errors become label noise, which the label-noise experiment only imitates.
+* **The target moves.** Looking at a partner depends on where that partner sits, so a classifier needs the scene
+  geometry as well as the eyes. A model trained on camera-directed gaze cannot be applied directly.
+* **Speaking turns.** Listeners tend to look at whoever is speaking, the cue Müller et al. combined with gaze. Turns
+  could act as a free, weak label. The label-efficiency question then becomes how many hand labels that cue can
+  replace, and whether the eye-local features that won here still win once it is available.
+
 ## References
 
 Key sources: Smith et al. 2013 (Columbia Gaze, gaze locking); Müller et al. 2018; Zhang et al. 2017; Oquab et al. 2024

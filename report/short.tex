@@ -221,6 +221,11 @@ Even the best method did not resolve the dataset's hardest distinction, 0° vs.\
 (AUROC $\le0.81$) is far from deployable, and it should not be compared with the per-image accuracies reported by
 Smith et al., who evaluated a different detector under a different protocol~\cite{smith2013gazelocking}.
 
+Multi-person conversation, the setting of M\"uller et al.~\cite{muller2018robust}, changes the task further.
+Each frame holds several faces that must be tracked apart, the gaze target is a partner rather than a fixed camera,
+and speaking turns offer a free, weak label, since listeners tend to look at the speaker. How many hand labels
+such a cue can replace is the natural next question for label efficiency.
+
 \section{Limitations and ethics}
 Results hold for one controlled dataset: 56 people, one lab, 2\,m distance, yaw-only head pose and a chin rest.
 Camera-directed gaze in this setting is a proxy, not interpersonal eye contact.
