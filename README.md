@@ -186,6 +186,14 @@ schema is in [`results/README.md`](results/README.md).
 **Exit codes:** 0 ok · 2 dataset missing or unparseable · 3 audit found blocking problems / no results yet ·
 4 an extraction stage failed · 5 no features cached.
 
+### Independent replication
+
+[`notebooks/fewgaze_independent_replication.ipynb`](notebooks/fewgaze_independent_replication.ipynb) re-implements
+the geometry baseline without any of this repository's code: its own filename parsing, MediaPipe features and
+landmark indices, and `GroupKFold` subject folds. It reproduces the headline result: AUROC 0.812 vs 0.810 [0.791, 0.833]
+with all labels, and the same head-pose pattern (0.714–0.887 vs 0.718–0.891). The notebook lists every difference from
+the repo pipeline and why none of them matters at this level.
+
 ## Results and figures
 
 | Figure | File | Script |
