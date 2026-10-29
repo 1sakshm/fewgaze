@@ -194,6 +194,8 @@ landmark indices, and `GroupKFold` subject folds. It reproduces the headline res
 with all labels, and the same head-pose pattern (0.714–0.887 vs 0.718–0.891). The notebook lists every difference from
 the repo pipeline and why none of them matters at this level.
 
+Video walkthrough of the replication (unlisted): https://youtu.be/DeFwNGmTRW0
+
 ## Results and figures
 
 | Figure | File | Script |

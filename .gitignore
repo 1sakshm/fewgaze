@@ -44,3 +44,4 @@ results/study3_*log*.txt
 # Independent replication notebook: downloaded model and features derived from the dataset
 notebooks/face_landmarker.task
 notebooks/replication_features.csv
+notebooks/*.mp4
