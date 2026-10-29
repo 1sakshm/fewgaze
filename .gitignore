@@ -40,3 +40,7 @@ results/runs/*/selections.json.gz
 site/demo/parity/
 results/study2_*log*.txt
 results/study3_*log*.txt
+
+# Independent replication notebook: downloaded model and features derived from the dataset
+notebooks/face_landmarker.task
+notebooks/replication_features.csv
